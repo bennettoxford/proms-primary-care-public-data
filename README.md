@@ -32,6 +32,10 @@ quarto render
 
 Outputs are written to `output/`.
 
+## References
+
+`manuscript/references.bib` is exported from the [Mental health research using public data](https://www.zotero.org/groups/6544461/mental_health_research_using_public_data/library) Zotero group library.
+
 ## Licence
 
 Code is licensed under the MIT Licence. The manuscript in `manuscript/` and the rendered outputs in `output/` are licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
