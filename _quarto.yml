@@ -1,0 +1,7 @@
+project:
+  type: default
+  output-dir: output
+  render:
+    - manuscript/proms.qmd
+
+execute-dir: project

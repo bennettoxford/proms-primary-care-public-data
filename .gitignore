@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.quarto/
+**/*.quarto_ipynb
+/.luarc.json
+/.quarto/
+output/manuscript/proms.html
+output/manuscript/proms.docx
+manuscript/elsevier-vancouver.csl
+manuscript/*_files/*
