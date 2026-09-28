@@ -837,8 +837,7 @@ fig_top_proms_ehr_anx_trends <- df_fig_top_3_ehr_anx_activity |>
     y = usage,
     group = codelist,
     panel_label = "PROMs for anxiety disorders",
-    x_breaks = x_breaks_ehr,
-    position = position_dodge(width = 150)
+    x_breaks = x_breaks_ehr
   ) +
   theme(legend.position = "bottom") +
   guides(
@@ -852,8 +851,7 @@ fig_top_proms_ehr_dep_trends <- df_fig_top_3_ehr_dep_activity |>
     y = usage,
     group = codelist,
     panel_label = "PROMs for depression",
-    x_breaks = x_breaks_ehr,
-    position = position_dodge(width = 250)
+    x_breaks = x_breaks_ehr
   ) +
   theme(legend.position = "bottom") +
   guides(
@@ -873,7 +871,7 @@ ggsave(
   filename = here(
     "output",
     "figures",
-    "fig-top-proms-ehr-anx-dep-trends.png"
+    "fig-top-proms-ehr-anx-dep-trends-no-jitter.png"
   ),
   fig_top_proms_ehr_anx_dep_trends,
   height = 8,
