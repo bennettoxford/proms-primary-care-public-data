@@ -663,7 +663,7 @@ This represented 1 in `r declined_one_in` recorded PROMs codes by `r format(END_
 ```{r}
 #| label: fig-proms-ehr-anx-dep-trends
 #| echo: false
-#| fig-cap: !expr 'paste0("Yearly recorded events for PROMs codes for anxiety disorders and depression in English general practice from ", format(START_DATE_EHR, "%B %Y"), " to ", format(END_DATE_EHR, "%B %Y"), ". Note that the range of the y-axis varies across panels. (A) Total PROMs coding, including all activity and declined codes; (B) score codes, which are observable entity concepts representing recorded PROM scores; and (C) procedure codes, representing PROM administration.")'
+#| fig-cap: !expr 'paste0("Yearly recorded events for PROMs codes for anxiety disorders and depression in English general practice from ", format(START_DATE_EHR, "%B %Y"), " to ", format(END_DATE_EHR, "%B %Y"), ".  (A) Total PROMs coding, including all activity and declined codes; (B) score codes, which are observable entity concepts representing recorded PROM scores; and (C) procedure codes, representing PROM administration. Note that the range of the y-axis varies across panels; no procedure code events were recorded for anxiety disorders before 2013.")'
 #| fig-height: 9
 #| fig-width: 8
 #| warning: false
