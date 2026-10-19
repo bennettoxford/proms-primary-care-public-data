@@ -6,6 +6,6 @@ project:
   post-render:
     # knitr::include_graphics() in tbl-top-proms-ehr-anx-dep makes Quarto copy
     # output/tables/ into output-dir, creating output/output/tables/.
-    - rm -rf output/output
+    - Rscript -e "unlink('output/output', recursive = TRUE)"
 
 execute-dir: project
