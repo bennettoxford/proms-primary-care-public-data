@@ -125,7 +125,7 @@ library(scales)
 library(here)
 library(patchwork)
 
-OCC_GP_DATA_VERSION <- "0.1.0"
+OCC_GP_DATA_VERSION <- "0.2.0"
 OCC_PACKAGE_VERSION <- as.character(packageVersion("opencodecounts"))
 
 dir.create(here("output", "figures"), recursive = TRUE, showWarnings = FALSE)
@@ -138,10 +138,10 @@ snomed_usage <- get_gp_snomed(version = OCC_GP_DATA_VERSION)
 #| label: get-codelists
 
 CODELIST_URLS <- c(
-  proms_anx_cod = "https://www.opencodelists.org/codelist/user/Lola_O/patient-reported-outcome-measures-for-anxiety-disorders/0314a9a9/",
-  proms_anx_declined_cod = "https://www.opencodelists.org/codelist/user/Lola_O/declined-proms-for-anxiety-disorders/631bb866/",
-  proms_dep_cod = "https://www.opencodelists.org/codelist/user/Lola_O/patient-reported-outcome-measures-for-depression/62e34278/",
-  proms_dep_declined_cod = "https://www.opencodelists.org/codelist/user/Lola_O/declined-proms-for-depression/4a0c4531/"
+  proms_anx_cod = "https://www.opencodelists.org/codelist/user/Lola_O/proms-anx/0314a9a9/",
+  proms_anx_declined_cod = "https://www.opencodelists.org/codelist/user/Lola_O/proms-anx-declined/631bb866/",
+  proms_dep_cod = "https://www.opencodelists.org/codelist/user/Lola_O/proms-dep/62e34278/",
+  proms_dep_declined_cod = "https://www.opencodelists.org/codelist/user/Lola_O/proms-dep-declined/4a0c4531/"
 )
 
 proms_anx_cod <- get_codelist(CODELIST_URLS[["proms_anx_cod"]])
