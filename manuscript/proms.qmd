@@ -171,11 +171,13 @@ description_dict_ehr <- c(
   "Hospital anxiety and depression scale" = "HADS",
   "Patient Health Questionnaire Nine Item score" = "PHQ-9 score",
   "Patient health questionnaire 9" = "PHQ-9",
+  "Patient Health Questionnaire-2 score" = "PHQ-2 score",
   "Edinburgh postnatal depression scale score" = "EPDS score",
   "Assessment using Whooley depression screen" = "Whooley depression screening",
   "Edinburgh postnatal depression scale" = "EPDS assessment",
   "Assessment using Generalized Anxiety Disorder 7 item scale declined" = "Assessment using GAD-7 declined",
-  "EuroQol five dimension five level anxiety depression score" = "EQ-5D-5L anxiety depression score"
+  "EuroQol five dimension five level anxiety depression score" = "EQ-5D-5L anxiety depression score",
+  "Post-traumatic stress disorder checklist for Diagnostic and Statistical Manual of Mental Disorders - Fifth Edition total symptom severity score" = "PTSD checklist for DSM-5 score"
 )
 
 # Codelist labels
@@ -571,7 +573,7 @@ tab_top_proms_ehr_anx_dep <- top_proms_ehr_anx_dep |>
   fmt_percent(columns = ratio_usage, decimals = 1) |>
   tab_source_note(
     source_note = md(
-      "*Notes*. GAD = Generalised Anxiety Disorder; HADS = Hospital Anxiety and Depression Scale; PHQ = Patient Health Questionnaire; EPDS = Edinburgh Postnatal Depression Scale. EQ-5D-5L = EuroQol five dimension five level. Percentage usage of PROMs is calculated separately for anxiety disorders and depression, using all recorded events for that condition as the denominator."
+      "*Notes*. GAD = Generalised Anxiety Disorder; HADS = Hospital Anxiety and Depression Scale; PHQ = Patient Health Questionnaire; EPDS = Edinburgh Postnatal Depression Scale. EQ-5D-5L = EuroQol five dimension five level; PTSD = Post-traumatic stress disorder; DSM-5 = Diagnostic and Statistical Manual of Mental Disorders - Fifth Edition. Percentage usage of PROMs is calculated separately for anxiety disorders and depression, using all recorded events for that condition as the denominator."
     )
   ) |>
   style_manuscript_table()
