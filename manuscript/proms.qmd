@@ -1176,3 +1176,123 @@ fig_proms_ehr_anx_dep_declined
 Yearly recorded events for declined PROMs codes for anxiety disorders and depression in English general practice from `r format(START_DATE_EHR, "%B %Y")` to `r format(END_DATE_EHR, "%B %Y")`.
 
 :::
+
+::: {#figa-top-5-proms-ehr-anx-dep-trends}
+
+```{r}
+#| label: make-fig-top-5-proms-ehr-anx-dep-trends
+#| echo: false
+#| fig-height: 10
+#| fig-width: 8
+#| warning: false
+
+top_5_proms_ehr_anx_codes <- df_proms_ehr_anx_dep_activity_total |>
+  filter(codelist == "proms_anx_cod") |>
+  slice_max(
+    order_by = total_usage,
+    n = 5,
+    with_ties = FALSE
+  ) |>
+  pull(snomed_code)
+
+top_5_proms_ehr_dep_codes <- df_proms_ehr_anx_dep_activity_total |>
+  filter(codelist == "proms_dep_cod") |>
+  slice_max(
+    order_by = total_usage,
+    n = 5,
+    with_ties = FALSE
+  ) |>
+  pull(snomed_code)
+
+df_fig_top_5_ehr_anx_activity <- df_proms_ehr_anx_dep_activity |>
+  filter(
+    proms_anx_cod,
+    snomed_code %in% top_5_proms_ehr_anx_codes
+  ) |>
+  mutate(
+    description_short = recode(description_short, !!!description_dict_ehr),
+    codelist = fct_reorder(
+      paste0(
+        description_short,
+        " (",
+        str_to_sentence(semantic_tag),
+        ")"
+      ),
+      usage,
+      .fun = sum,
+      .desc = TRUE
+    )
+  )
+
+df_fig_top_5_ehr_dep_activity <- df_proms_ehr_anx_dep_activity |>
+  filter(
+    proms_dep_cod,
+    snomed_code %in% top_5_proms_ehr_dep_codes
+  ) |>
+  mutate(
+    description_short = recode(description_short, !!!description_dict_ehr),
+    codelist = fct_reorder(
+      paste0(
+        description_short,
+        " (",
+        str_to_sentence(semantic_tag),
+        ")"
+      ),
+      usage,
+      .fun = sum,
+      .desc = TRUE
+    )
+  )
+
+fig_top_5_proms_ehr_anx_trends <- df_fig_top_5_ehr_anx_activity |>
+  plot_usage_trend(
+    x = end_date,
+    y = usage,
+    group = codelist,
+    panel_label = "PROMs for anxiety disorders",
+    x_breaks = x_breaks_ehr
+  ) +
+  theme(legend.position = "bottom") +
+  guides(
+    colour = guide_legend(nrow = 3, byrow = TRUE),
+    shape = guide_legend(nrow = 3, byrow = TRUE)
+  )
+
+fig_top_5_proms_ehr_dep_trends <- df_fig_top_5_ehr_dep_activity |>
+  plot_usage_trend(
+    x = end_date,
+    y = usage,
+    group = codelist,
+    panel_label = "PROMs for depression",
+    x_breaks = x_breaks_ehr
+  ) +
+  theme(legend.position = "bottom") +
+  guides(
+    colour = guide_legend(nrow = 3, byrow = TRUE),
+    shape = guide_legend(nrow = 3, byrow = TRUE)
+  )
+
+fig_top_5_proms_ehr_anx_dep_trends <-
+  (fig_top_5_proms_ehr_anx_trends /
+    fig_top_5_proms_ehr_dep_trends) +
+  plot_layout(axis_titles = "collect") +
+  plot_annotation(tag_levels = list(c("A", "B"))) &
+  theme(plot.tag = element_text(margin = margin(r = 8)))
+
+ggsave(
+  filename = here(
+    "output",
+    "figures",
+    "fig-top-5-proms-ehr-anx-dep-trends.png"
+  ),
+  fig_top_5_proms_ehr_anx_dep_trends,
+  height = 10,
+  width = 8
+)
+
+fig_top_5_proms_ehr_anx_dep_trends
+```
+
+Yearly recorded events for the five most frequently recorded PROMs activity codes for anxiety disorders (Panel A) and depression (Panel B) in English general practice from `r format(START_DATE_EHR, "%B %Y")` to `r format(END_DATE_EHR, "%B %Y")`. Note that the range of the y-axis varies between panels.
+
+:::
