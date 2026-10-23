@@ -1177,122 +1177,60 @@ Yearly recorded events for declined PROMs codes for anxiety disorders and depres
 
 :::
 
-::: {#figa-top-5-proms-ehr-anx-dep-trends}
+::: {#figa-selected-proms-ehr-trends}
 
 ```{r}
-#| label: make-fig-top-5-proms-ehr-anx-dep-trends
+#| label: make-fig-selected-proms-ehr-trends
 #| echo: false
-#| fig-height: 10
+#| fig-height: 5
 #| fig-width: 8
 #| warning: false
 
-top_5_proms_ehr_anx_codes <- df_proms_ehr_anx_dep_activity_total |>
-  filter(codelist == "proms_anx_cod") |>
-  slice_max(
-    order_by = total_usage,
-    n = 5,
-    with_ties = FALSE
-  ) |>
-  pull(snomed_code)
+selected_proms_codes <- c(
+  "1359723003" = "PHQ-2 score",
+  "836571000000106" = "GAD-2 score",
+  "792491000000100" = "Whooley depression screening"
+)
 
-top_5_proms_ehr_dep_codes <- df_proms_ehr_anx_dep_activity_total |>
-  filter(codelist == "proms_dep_cod") |>
-  slice_max(
-    order_by = total_usage,
-    n = 5,
-    with_ties = FALSE
-  ) |>
-  pull(snomed_code)
-
-df_fig_top_5_ehr_anx_activity <- df_proms_ehr_anx_dep_activity |>
-  filter(
-    proms_anx_cod,
-    snomed_code %in% top_5_proms_ehr_anx_codes
-  ) |>
+df_fig_selected_proms_ehr_trends <- df_proms_ehr_anx_dep_activity |>
+  filter(snomed_code %in% names(selected_proms_codes)) |>
   mutate(
-    description_short = recode(description_short, !!!description_dict_ehr),
-    codelist = fct_reorder(
-      paste0(
-        description_short,
-        " (",
-        str_to_sentence(semantic_tag),
-        ")"
-      ),
-      usage,
-      .fun = sum,
-      .desc = TRUE
+    codelist = recode(snomed_code, !!!selected_proms_codes),
+    codelist = factor(
+      codelist,
+      levels = unname(selected_proms_codes)
     )
   )
 
-df_fig_top_5_ehr_dep_activity <- df_proms_ehr_anx_dep_activity |>
-  filter(
-    proms_dep_cod,
-    snomed_code %in% top_5_proms_ehr_dep_codes
-  ) |>
-  mutate(
-    description_short = recode(description_short, !!!description_dict_ehr),
-    codelist = fct_reorder(
-      paste0(
-        description_short,
-        " (",
-        str_to_sentence(semantic_tag),
-        ")"
-      ),
-      usage,
-      .fun = sum,
-      .desc = TRUE
-    )
-  )
-
-fig_top_5_proms_ehr_anx_trends <- df_fig_top_5_ehr_anx_activity |>
+fig_selected_proms_ehr_trends <-
+  df_fig_selected_proms_ehr_trends |>
   plot_usage_trend(
     x = end_date,
     y = usage,
     group = codelist,
-    panel_label = "PROMs for anxiety disorders",
+    panel_label = "Short assessment scales for depression and generalised anxiety disorder",
     x_breaks = x_breaks_ehr
   ) +
   theme(legend.position = "bottom") +
   guides(
-    colour = guide_legend(nrow = 3, byrow = TRUE),
-    shape = guide_legend(nrow = 3, byrow = TRUE)
+    colour = guide_legend(nrow = 1, byrow = TRUE),
+    shape = guide_legend(nrow = 1, byrow = TRUE)
   )
-
-fig_top_5_proms_ehr_dep_trends <- df_fig_top_5_ehr_dep_activity |>
-  plot_usage_trend(
-    x = end_date,
-    y = usage,
-    group = codelist,
-    panel_label = "PROMs for depression",
-    x_breaks = x_breaks_ehr
-  ) +
-  theme(legend.position = "bottom") +
-  guides(
-    colour = guide_legend(nrow = 3, byrow = TRUE),
-    shape = guide_legend(nrow = 3, byrow = TRUE)
-  )
-
-fig_top_5_proms_ehr_anx_dep_trends <-
-  (fig_top_5_proms_ehr_anx_trends /
-    fig_top_5_proms_ehr_dep_trends) +
-  plot_layout(axis_titles = "collect") +
-  plot_annotation(tag_levels = list(c("A", "B"))) &
-  theme(plot.tag = element_text(margin = margin(r = 8)))
 
 ggsave(
   filename = here(
     "output",
     "figures",
-    "fig-top-5-proms-ehr-anx-dep-trends.png"
+    "fig-selected-proms-ehr-trends.png"
   ),
-  fig_top_5_proms_ehr_anx_dep_trends,
-  height = 10,
+  fig_selected_proms_ehr_trends,
+  height = 5,
   width = 8
 )
 
-fig_top_5_proms_ehr_anx_dep_trends
+fig_selected_proms_ehr_trends
 ```
 
-Yearly recorded events for the five most frequently recorded PROMs activity codes for anxiety disorders (Panel A) and depression (Panel B) in English general practice from `r format(START_DATE_EHR, "%B %Y")` to `r format(END_DATE_EHR, "%B %Y")`. Note that the range of the y-axis varies between panels.
+Annual recorded events for the PHQ-2 score, GAD-2 score, and Whooley depression screening SNOMED CT codes in English general practice from `r format(START_DATE_EHR, "%B %Y")` to `r format(END_DATE_EHR, "%B %Y")`. The PHQ-2 and GAD-2 are two-item measures using four-point Likert response scale, with each item scored 0 to 3. The Whooley questions comprise two binary (yes/no) questions to identify possible depression.
 
 :::
