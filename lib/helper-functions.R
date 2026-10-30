@@ -68,7 +68,6 @@ plot_usage_trend <- function(
       labels = scales::label_number(accuracy = 1),
       limits = c(0, NA)
     ) +
-    ggplot2::scale_colour_viridis_d(end = .6) +
     ggplot2::facet_wrap(~.panel, ncol = 1) +
     theme_proms()
 }
@@ -87,5 +86,29 @@ style_manuscript_table <- function(gt_table) {
     gt::tab_style(
       style = gt::cell_text(weight = "bold"),
       locations = gt::cells_row_groups()
+    )
+}
+
+# Count usage of old codes as their linked new code, using the new code's
+# description.
+combine_linked_codes <- function(data, linked_codes) {
+  data |>
+    dplyr::mutate(
+      is_old_code = snomed_code %in% names(linked_codes),
+      snomed_code = dplyr::coalesce(
+        unname(linked_codes[snomed_code]),
+        snomed_code
+      )
+    ) |>
+    dplyr::mutate(
+      description = dplyr::first(
+        description[!is_old_code],
+        default = dplyr::first(description)
+      ),
+      .by = snomed_code
+    ) |>
+    dplyr::summarise(
+      usage = sum(usage),
+      .by = c(start_date, end_date, snomed_code, description)
     )
 }
