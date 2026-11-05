@@ -4,7 +4,7 @@ project:
   render:
     - manuscript/proms.qmd
   post-render:
-    # knitr::include_graphics() in tbl-top-proms-ehr-anx-dep makes Quarto copy
+    # knitr::include_graphics() in tbl-anx-dep-top makes Quarto copy
     # output/tables/ into output-dir, creating output/output/tables/.
     - Rscript -e "unlink('output/output', recursive = TRUE)"
 

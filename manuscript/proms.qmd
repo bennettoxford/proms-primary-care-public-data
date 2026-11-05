@@ -93,13 +93,13 @@ link-citations: true
 crossref:
   custom:
     - kind: float
-      key: figa
-      latex-env: figa
+      key: figs
+      latex-env: figs
       reference-prefix: "Figure S"
       space-before-numbering: false
     - kind: float
       key: tbls
-      latex-env: table
+      latex-env: tbls
       reference-prefix: "Table S"
       space-before-numbering: false
 format:
@@ -124,245 +124,108 @@ library(gt)
 library(scales)
 library(here)
 library(patchwork)
+library(paletteer)
 
-OCC_GP_DATA_VERSION <- "0.1.0"
+OCC_GP_DATA_VERSION <- "0.2.0"
 OCC_PACKAGE_VERSION <- as.character(packageVersion("opencodecounts"))
 
 dir.create(here("output", "figures"), recursive = TRUE, showWarnings = FALSE)
 dir.create(here("output", "tables"), recursive = TRUE, showWarnings = FALSE)
 
-snomed_usage <- get_gp_snomed(version = OCC_GP_DATA_VERSION)
+df_snomed_usage <- get_gp_snomed(version = OCC_GP_DATA_VERSION)
 ```
 
 ```{r}
 #| label: get-codelists
 
-CODELIST_URLS <- c(
-  proms_anx_cod = "https://www.opencodelists.org/codelist/user/Lola_O/patient-reported-outcome-measures-for-anxiety-disorders/0314a9a9/",
-  proms_anx_declined_cod = "https://www.opencodelists.org/codelist/user/Lola_O/declined-proms-for-anxiety-disorders/631bb866/",
-  proms_dep_cod = "https://www.opencodelists.org/codelist/user/Lola_O/patient-reported-outcome-measures-for-depression/62e34278/",
-  proms_dep_declined_cod = "https://www.opencodelists.org/codelist/user/Lola_O/declined-proms-for-depression/4a0c4531/"
-)
+# Download the codelists in codelists.txt and save them as CSV files
+ids <- read_lines(here("codelists", "codelists.txt"))
+codelists <- map(set_names(ids, str_replace_all(dirname(ids), "/", "-")), \(id) {
+  get_codelist(paste0("https://www.opencodelists.org/codelist/", id))
+})
+iwalk(codelists, \(x, name) write_csv(x, here("codelists", paste0(name, ".csv"))))
 
-proms_anx_cod <- get_codelist(CODELIST_URLS[["proms_anx_cod"]])
-proms_anx_declined_cod <- get_codelist(CODELIST_URLS[["proms_anx_declined_cod"]])
-proms_dep_cod <- get_codelist(CODELIST_URLS[["proms_dep_cod"]])
-proms_dep_declined_cod <- get_codelist(CODELIST_URLS[["proms_dep_declined_cod"]])
+df_anx_proms_cod <- codelists[["user-Lola_O-proms-anx"]]
+df_anx_proms_declined_cod <- codelists[["user-Lola_O-proms-anx-declined"]]
+df_dep_proms_cod <- codelists[["user-Lola_O-proms-dep"]]
+df_dep_proms_declined_cod <- codelists[["user-Lola_O-proms-dep-declined"]]
 ```
 
 ```{r}
 #| label: load-functions
 source(here("lib", "usage-functions.R"))
 source(here("lib", "helper-functions.R"))
+source(here("lib", "dictionaries.R"))
 ```
 
 ```{r}
-#| label: get-ehr-data
-START_DATE_EHR <- min(snomed_usage$start_date)
-END_DATE_EHR <- max(snomed_usage$end_date)
+#| label: tidy-occ-data
+START_DATE <- min(df_snomed_usage$start_date)
+END_DATE <- max(df_snomed_usage$end_date)
 
-description_dict_ehr <- c(
-  "Generalized Anxiety Disorder 7 item score" = "GAD-7 score",
-  "Generalized anxiety disorder 7 item score" = "GAD-7 score",
-  "Generalised anxiety disorder 2 scale score" = "GAD-2 score",
-  "Generalised anxiety disorder 2 scale" = "GAD-2 assessment",
-  "Hospital Anxiety and Depression scale: anxiety score" = "HADS anxiety score",
-  "Hospital Anxiety and Depression scale: depression score" = "HADS depression score",
-  "Hospital anxiety and depression scale" = "HADS",
-  "Patient Health Questionnaire Nine Item score" = "PHQ-9 score",
-  "Patient health questionnaire 9" = "PHQ-9",
-  "Edinburgh postnatal depression scale score" = "EPDS score",
-  "Assessment using Whooley depression screen" = "Whooley depression screening",
-  "Edinburgh postnatal depression scale" = "EPDS assessment",
-  "Assessment using Generalized Anxiety Disorder 7 item scale declined" = "Assessment using GAD-7 declined",
-  "EuroQol five dimension five level anxiety depression score" = "EQ-5D-5L anxiety depression score"
-)
-
-# Codelist labels
-proms_ehr_activity_codelist_levels <- c(
-  "proms_anx_cod",
-  "proms_dep_cod"
-)
-
-proms_ehr_declined_codelist_levels <- c(
-  "proms_anx_declined_cod",
-  "proms_dep_declined_cod"
-)
-
-codelist_labels_ehr <- c(
-  "PROMs for anxiety disorders",
-  "PROMs for depression"
-)
-
-# Activity data
-df_proms_ehr_anx_dep_activity <- snomed_usage |>
-  filter(snomed_code %in% c(proms_anx_cod$code, proms_dep_cod$code)) |>
+# Keep study codes, count inactive codes as their linked active code, and use
+# the latest description for each code
+df_anx_dep_snomed_usage <- df_snomed_usage |>
+  filter(snomed_code %in% unlist(map(codelists, "code"))) |>
+  combine_linked_codes(dict_linked_codes) |>
   mutate(
     semantic_tag = extract_semantic_tag(description),
-    description_short = strip_semantic_tag(description),
-    proms_anx_cod = snomed_code %in% proms_anx_cod$code,
-    proms_dep_cod = snomed_code %in% proms_dep_cod$code
-  ) |>
-  select(
-    start_date,
-    end_date,
-    snomed_code,
-    description,
-    usage,
-    description_short,
-    semantic_tag,
-    proms_anx_cod,
-    proms_dep_cod
-  ) |>
-  group_by(snomed_code) |>
-  arrange(desc(end_date), .by_group = TRUE) |>
-  mutate(description_short = first(description_short)) |>
-  ungroup() |>
-  arrange(desc(end_date), snomed_code)
-
-# Activity totals
-df_proms_ehr_anx_dep_activity_total <- df_proms_ehr_anx_dep_activity |>
-  group_by(snomed_code) |>
-  mutate(total_usage = sum(usage)) |>
-  select(
-    snomed_code,
-    description_short,
-    semantic_tag,
-    all_of(proms_ehr_activity_codelist_levels),
-    total_usage
-  ) |>
-  distinct(snomed_code, .keep_all = TRUE) |>
-  ungroup() |>
-  pivot_longer(
-    cols = all_of(proms_ehr_activity_codelist_levels),
-    names_to = "codelist"
-  ) |>
-  filter(value) |>
-  group_by(codelist) |>
-  mutate(ratio_usage = total_usage / sum(total_usage))
-
-# Activity trends
-df_fig_proms_ehr_anx_dep_activity <- df_proms_ehr_anx_dep_activity |>
-  select(
-    end_date,
-    snomed_code,
-    semantic_tag,
-    usage,
-    all_of(proms_ehr_activity_codelist_levels)
-  ) |>
-  pivot_longer(
-    cols = all_of(proms_ehr_activity_codelist_levels),
-    names_to = "codelist"
-  ) |>
-  filter(value) |>
-  select(-value)
-
-# Declined data
-df_proms_ehr_anx_dep_declined <- snomed_usage |>
-  filter(
-    snomed_code %in% c(proms_anx_declined_cod$code, proms_dep_declined_cod$code)
+    description_short = strip_semantic_tag(description)
   ) |>
   mutate(
-    semantic_tag = extract_semantic_tag(description),
-    description_short = strip_semantic_tag(description),
-    proms_anx_declined_cod = snomed_code %in% proms_anx_declined_cod$code,
-    proms_dep_declined_cod = snomed_code %in% proms_dep_declined_cod$code
+    description_short = last(description_short, order_by = end_date),
+    .by = snomed_code
   ) |>
-  select(
-    start_date,
-    end_date,
-    snomed_code,
-    description,
-    usage,
-    description_short,
-    semantic_tag,
-    proms_anx_declined_cod,
-    proms_dep_declined_cod
-  ) |>
-  group_by(snomed_code) |>
-  arrange(desc(end_date), .by_group = TRUE) |>
-  mutate(description_short = first(description_short)) |>
-  ungroup() |>
   arrange(desc(end_date), snomed_code)
+```
 
-# Declined totals
-df_proms_ehr_anx_dep_declined_total <- df_proms_ehr_anx_dep_declined |>
-  group_by(snomed_code) |>
-  mutate(total_usage = sum(usage)) |>
-  select(
-    snomed_code,
-    description_short,
-    semantic_tag,
-    all_of(proms_ehr_declined_codelist_levels),
-    total_usage
-  ) |>
-  distinct(snomed_code, .keep_all = TRUE) |>
-  ungroup() |>
-  pivot_longer(
-    cols = all_of(proms_ehr_declined_codelist_levels),
-    names_to = "codelist"
-  ) |>
-  filter(value) |>
-  group_by(codelist) |>
-  mutate(ratio_usage = total_usage / sum(total_usage))
-
-# Declined trends
-df_fig_proms_ehr_anx_dep_declined <- df_proms_ehr_anx_dep_declined |>
-  select(
-    end_date,
-    snomed_code,
-    semantic_tag,
-    usage,
-    all_of(proms_ehr_declined_codelist_levels)
-  ) |>
-  pivot_longer(
-    cols = all_of(proms_ehr_declined_codelist_levels),
-    names_to = "codelist"
-  ) |>
-  filter(value) |>
-  select(-value)
-
-# Combined totals
-df_proms_ehr_anx_dep_all_total <- bind_rows(
-  df_proms_ehr_anx_dep_activity_total,
-  df_proms_ehr_anx_dep_declined_total
-) |>
+```{r}
+#| label: prepare-datasets
+# One row per code and codelist
+df_anx_dep_codelist_lookup <- codelists |>
+  map(\(codelist) tibble(snomed_code = codelist$code)) |>
+  list_rbind(names_to = "codelist") |>
+  distinct() |>
   mutate(
-    condition = case_when(
-      codelist %in% c("proms_anx_cod", "proms_anx_declined_cod") ~ "proms_anx",
-      codelist %in% c("proms_dep_cod", "proms_dep_declined_cod") ~ "proms_dep"
+    condition = if_else(str_detect(codelist, "anx"), "anx", "dep"),
+    type = if_else(str_detect(codelist, "declined"), "declined", "activity")
+  )
+
+# One row per code, period and codelist. Codes in both conditions appear twice.
+df_anx_dep_usage <- df_anx_dep_snomed_usage |>
+  inner_join(
+    df_anx_dep_codelist_lookup,
+    by = "snomed_code",
+    relationship = "many-to-many"
+  ) |>
+  mutate(
+    condition_label = factor(
+      condition,
+      levels = names(dict_condition_labels),
+      labels = dict_condition_labels
     )
+  )
+
+# Total usage per code, with each code's share of its condition
+df_anx_dep_overall <- df_anx_dep_usage |>
+  summarise(
+    overall_usage = sum(usage),
+    .by = c(condition, type, snomed_code, description_short, semantic_tag)
   ) |>
-  group_by(condition) |>
-  mutate(ratio_usage = total_usage / sum(total_usage)) |>
-  ungroup()
+  mutate(share_usage = overall_usage / sum(overall_usage), .by = condition)
 
-# Combined trends
-df_fig_proms_ehr_anx_dep_all <- bind_rows(
-  df_fig_proms_ehr_anx_dep_activity,
-  df_fig_proms_ehr_anx_dep_declined
-)
-
-x_breaks_ehr <- sort(unique(df_proms_ehr_anx_dep_activity$end_date))
-
-# Analysis data
-events_proms_ehr <- df_fig_proms_ehr_anx_dep_all |>
-  mutate(
-    condition = if_else(str_starts(codelist, "proms_anx"), "anx", "dep"),
-    type = if_else(
-      codelist %in% proms_ehr_declined_codelist_levels,
-      "declined",
-      "activity"
-    ),
-    year = year(end_date)
-  ) |>
+# Yearly usage per code for the results text
+df_anx_dep_events <- df_anx_dep_usage |>
+  mutate(year = year(end_date)) |>
   summarise(
     usage = sum(usage),
     .by = c(condition, type, semantic_tag, snomed_code, year)
   )
 
-anx_events <- filter(events_proms_ehr, condition == "anx")
-dep_events <- filter(events_proms_ehr, condition == "dep")
+x_breaks <- sort(unique(df_anx_dep_usage$end_date))
+
+df_anx_events <- filter(df_anx_dep_events, condition == "anx")
+df_dep_events <- filter(df_anx_dep_events, condition == "dep")
 ```
 
 
@@ -370,19 +233,28 @@ dep_events <- filter(events_proms_ehr, condition == "dep")
 
 ```{r}
 #| label: abstract
-anx_total <- usage_total(anx_events)
-dep_total <- usage_total(dep_events)
+txt_anx_overall <- usage_total(df_anx_events)
+txt_dep_overall <- usage_total(df_dep_events)
 
-ratio_dep_anx <- usage_total(dep_events, .format_as_str = FALSE) /
-  usage_total(anx_events, .format_as_str = FALSE)
-ratio_dep_anx_rounded <- round(ratio_dep_anx)
+txt_dep_last <- usage_total(df_dep_events, year == year(END_DATE))
+txt_anx_last <- usage_total(df_anx_events, year == year(END_DATE))
+
+txt_dep_anx_ratio_overall_rounded <- round(
+  usage_total(df_dep_events, .format_as_str = FALSE) /
+    usage_total(df_anx_events, .format_as_str = FALSE)
+)
+txt_dep_anx_ratio_last_rounded <- round(
+  usage_total(df_dep_events, year == year(END_DATE), .format_as_str = FALSE) /
+    usage_total(df_anx_events, year == year(END_DATE), .format_as_str = FALSE),
+  1
+)
 ```
 
 **Background:**
 Patient-reported outcome measures (PROMs) are widely used to assess symptom severity, guide treatment, and inform service improvement for anxiety disorders and depression in mental health settings.
 However, PROMs use is not systematic in primary care, where most individuals with these conditions first present.
 **Aim:**
-To describe PROMs recording and use from `r format(START_DATE_EHR, "%B %Y")` to `r format(END_DATE_EHR, "%B %Y")` for anxiety disorders and depression in primary care electronic health records in England.
+To describe PROMs recording and use from `r format(START_DATE, "%B %Y")` to `r format(END_DATE, "%B %Y")` for anxiety disorders and depression in primary care electronic health records in England.
 **Design and setting:**
 Retrospective descriptive analysis of publicly available national SNOMED CT code usage data from most general practices in England through OpenCodeCounts.
 **Method:**
@@ -390,8 +262,8 @@ We developed PROMs activity and declined-assessment codelists for anxiety disord
 **Results:**
 Over the past 5 years, GAD-7 and PHQ-9 were the most frequently recorded PROMs for anxiety disorders and depression, respectively.
 Recording shifted from PROMs procedure codes, which do not record assessment scores, towards PROMs codes that record these measure scores.
-Depression-related PROMs codes were recorded around `r ratio_dep_anx_rounded` times as often as anxiety disorder-related codes (`r dep_total` vs `r anx_total`).
-PHQ-9 score usage dropped by half after 2013, following the cessation of financial incentives to record them. This fall was recovered completely by 2025.
+Over the entire study period, depression-related PROMs codes were recorded around `r txt_dep_anx_ratio_overall_rounded` times as often as anxiety disorder-related codes (`r txt_dep_overall` vs `r txt_anx_overall`), decreasing to `r txt_dep_anx_ratio_last_rounded` times in `r format(END_DATE, "%B %Y")` (`r txt_dep_last` vs `r txt_anx_last`).
+PHQ-9 score usage dropped by half after 2013, following the cessation of financial incentives to record them. This fall was recovered completely by `r year(END_DATE)`.
 **Conclusion:**
 Publicly available aggregate data can be used to describe PROMs recording over time, explore trends, and inform feasibility of research on anxiety disorders and depression in English general practice.
 
@@ -403,94 +275,95 @@ The National Institute for Health and Care Excellence (NICE) and the British Med
 How often and in what form these measures are recorded in general practice is unclear.
 We used OpenCodeCounts, an openly accessible online tool and R package that shows how often clinical codes are used in England.
 Over the past 5 years, recording shifted towards codes that record the measure scores, specifically PHQ-9 and GAD-7.
-Additionally, recording of PHQ-9 declined after financial incentives ended in 2013, before increasing again by the end of the study period in 2025.
+Additionally, recording of PHQ-9 declined after financial incentives ended in 2013, before increasing again by the end of the study period in `r year(END_DATE)`.
 These findings provide national context on PROMs recording in primary care.
 They also show how publicly available data can inform future patient-level studies.
 
 ## Introduction
 
-Anxiety disorders and depression are the most commonly occurring mental health conditions in England.
+Anxiety disorders and depression are the most common mental health conditions in England.
 The nationally representative Adult Psychiatric Morbidity Survey found that the prevalence of generalised anxiety disorder and depressive episodes among adults aged 16-64 increased between 1993 and 2023/24, reaching 8.5% and 4.4% respectively [@Morris2025].
 Recorded anxiety disorder diagnoses and symptoms in primary care have similarly increased [@Archer2022; @Slee2021].
 Primary care is the main point of contact for people with anxiety disorders and depression in England [@Morris2025].
-Psychological (talking) therapies are recommended for these conditions, with most therapy in England provided by NHS Talking Therapies (NHS TT) for anxiety and depression, which treated over 670,000 adults in 2024-25 [@Clark2018a; @NHSEngland2025a].
-In both settings, structured assessment of symptom severity is central to guiding clinical decisions, including identifying appropriate treatment and monitoring progress [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022].
+Psychological (talking) therapies are recommended for these conditions, with most therapy in England provided by NHS Talking Therapies (NHS TT) for anxiety and depression, which treated over 674,000 adults in 2025-26 [@Clark2018a; @NHSEngland2026].
+In both settings, structured assessment of symptom severity guides clinical decisions, including identifying appropriate treatment and monitoring progress [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022].
 
 Patient-reported outcome measures (PROMs) are self-completed questionnaires that assess symptom severity and daily functioning in physical and mental health conditions.
-They are used in a range of clinical settings in primary, secondary, and community-based care [@Kendir2025].
-The National Institute for Health and Care Excellence (NICE) recommends validated measures to assess severity and guide treatment decisions [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022].
-The Quality and Outcomes Framework (QOF) financially incentivised general practitioners to record structured severity assessments for depression at diagnosis from 2006 and at follow-up from 2009, until these indicators were retired in 2013 [@Kendrick2009; @Kendrick2020].
-For depression, the British Medical Association recommended three tools for general practice use [-@BritishMedicalAssociation2006]: the Patient Health Questionnaire-9 [PHQ-9, @Kroenke2001], the Beck Depression Inventory [BDI-II, @Beck1996], and the depression subscale of the Hospital Anxiety and Depression Scale [HADS-D, @Zigmond1983].
-For anxiety disorders, the Generalised Anxiety Disorder 7-item scale [GAD-7, @Spitzer2006] is widely used for severity assessment, with the GAD 2-item scale recommended as an initial screening tool [@Plummer2016; @NationalInstituteForHealthAndCareExcellence2020].
+They are used across primary, secondary, and community-based care [@Kendir2025].
+The National Institute for Health and Care Excellence (NICE) and the British Medical Association (BMA) recommend validated measures to assess severity and guide treatment decisions [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022; @BritishMedicalAssociation2006].
+For depression, the Patient Health Questionnaire-9 [PHQ-9, @Kroenke2001], the Beck Depression Inventory [BDI-II, @Beck1996], and the depression subscale of the Hospital Anxiety and Depression Scale [HADS-D, @Zigmond1983] are used for symptom severity, with the Whooley screening [@Whooley1997] and the 2-item version of the PHQ [PHQ-2, @Kroenke2003] used for screening.
+Both ask the same questions, answered yes/no or on a Likert scale.
+For anxiety disorders, the Generalised Anxiety Disorder 7-item scale [GAD-7, @Spitzer2006] is widely used for symptom severity, with the 2-item version (GAD-2) used for screening [@NationalInstituteForHealthAndCareExcellence2020].
 How these recommendations translate into routine practice is less clear.
-Examining patterns in PROMs recording provides insights into which recommended measures are recorded in primary care and how this has changed over time.
 
-When PROMs are used systematically to assess symptoms at diagnosis and again at follow-up appointments, there is evidence that such monitoring can improve patient outcomes, particularly in psychological therapy settings [@Clark2018a; @Kendrick2016; @Kendrick2020; @Kendrick2024a].
-Previous studies have demonstrated the feasibility and value of using PROMs in clinical practice [@Gelkopf2022].
-However, they have not examined how these measures are captured in electronic health records (EHRs).
-Understanding this could facilitate research in routinely collected data on the impact of PROMs monitoring on patient trajectories.
-Such research depends on reliable codelists that identify PROMs in EHRs [@Matthewman2024], and understanding the completeness of PROMs recording, including availability of numeric scores, and distinguishing declined assessments from those never offered.
-This is currently not well understood.
+Systematic use of PROMs at initial assessment and follow-up can improve patient outcomes, particularly in psychological therapy settings [@Clark2018a; @Kendrick2016; @Kendrick2020; @Kendrick2024a; @Gelkopf2022].
+The Quality and Outcomes Framework (QOF) financially incentivised general practitioners to record structured severity assessments for depression at diagnosis from 2006 and at follow-up from 2009, until these indicators were retired in 2013 [@Kendrick2009; @Kendrick2020].
+However, large scale research is lacking on the impact of PROMs use on patient trajectories in primary care.
+This work first requires reliable codelists that identify PROMs in electronic health records (EHRs) [@Matthewman2024], assessment of recording completeness, including the presence of numeric scores, and distinguishing declined assessments from those never offered.
 
-NHS England publishes aggregated [primary care code usage](https://digital.nhs.uk/data-and-information/publications/statistical/mi-snomed-code-usage-in-primary-care) data, which includes PROMs-related activity from most general practices in England since 2011, and the R package *opencodecounts* [@Tamborska2025] makes this dataset available for research.
-Using this data source, this study describes PROMs recording and use for anxiety disorders and depression in English general practice.
-The study has two aims: (1) to build robust codelists and describe which measures are recorded and how their use has changed over time, informing future patient-level studies; and (2) to demonstrate how publicly available aggregate data can be used to study PROMs activity for anxiety disorders and depression in general practice in England.
+We set out to describe PROMs recording and use for anxiety disorders and depression in English general practice.
+NHS England publishes aggregated [primary care code usage](https://digital.nhs.uk/data-and-information/publications/statistical/mi-snomed-code-usage-in-primary-care) data, which includes most general practices in England since `r year(START_DATE)` and is available through the R package *opencodecounts* [@Tamborska2025].
+This study aims
+(1) to develop open codelists for PROMs based on national guidance,
+(2) to describe how often and in what form these measures are recorded over time, and
+(3) to show how publicly available aggregate data can inform future patient-level studies.
 
 ## Methods
 
 ### Design and setting
 
 This was a retrospective descriptive analysis of PROMs-related coding in primary care EHRs.
-We analysed national SNOMED CT code usage across all general practices in England that contributed to the public dataset from `r format(START_DATE_EHR, "%B %Y")` to `r format(END_DATE_EHR, "%B %Y")`.
-The dataset included 6,606 general practices with 63,936,000 registered patients in 2024/25.
-SNOMED CT is a standardised clinical terminology in which each clinical concept or process is assigned a specific code and description.
-Each code is categorised by semantic tags to indicate the type of clinical information encoded.
-The "observable entity" semantic tag represents a measurable result (e.g., questionnaire score), whereas a "procedure" semantic tag represents an activity carried out as part of patient care (e.g., undertaken assessment).
-Other semantic tags can indicate a clinical finding or diagnosis.
-Clinical codes are typically assigned and added to the EHR by clinical or non-clinical staff, or automatically via software.
+We analysed national SNOMED CT code usage across all general practices in England that contributed to the public dataset from `r format(START_DATE, "%B %Y")` to `r format(END_DATE, "%B %Y")`.
+The dataset included 6,565 general practices with 63,665,066 registered patients in 2025-26.
 
 ### Data sources
 
 We used publicly available [SNOMED CT Code Usage in Primary Care](https://digital.nhs.uk/data-and-information/publications/statistical/mi-snomed-code-usage-in-primary-care) data from NHS England, accessed as dataset version `r OCC_GP_DATA_VERSION` through the _opencodecounts_ R package [Version `r OCC_PACKAGE_VERSION`, @Tamborska2025].
-The usage count reflects how many times each listed SNOMED CT code was added to a patient's primary care record in England during the annual reporting period, with counts rounded to the nearest 10 and counts of five or below displayed as 5.
-Each yearly data point is labelled by its end date (e.g., "July 2024" covers the reporting period from 1 August 2023 to 31 July 2024).
-Before 2019, data was submitted in Read v2 or CTV3 format and was mapped to SNOMED CT, which may affect the comparability of counts across the full study period.
-Since counts are aggregated, they reflect instances of code use rather than distinct patients.
+SNOMED CT is a standardised clinical terminology that gives each concept a code, a description and a semantic tag for the type of information.
+For example, "observable entity" codes record a measurable result (e.g., questionnaire score), and "procedure" codes record an activity (e.g., undertaken assessment).
+The usage count reflects the number of times each listed SNOMED CT code was added to a patient's primary care record in England during the annual reporting period, with counts rounded to the nearest 10 and counts of five or below displayed as 5.
+Each yearly data point is labelled by its end date (e.g., "July 2024" covers 1 August 2023 to 31 July 2024).
 
 ### Codelist development
 
 ```{r}
 #| label: methods-codelist-development
-shared_codes <- intersect(proms_anx_cod$code, proms_dep_cod$code)
-n_shared_codes <- length(shared_codes)
-pct_shared_anx <- usage_share(anx_events, snomed_code %in% shared_codes)
-pct_shared_dep <- usage_share(dep_events, snomed_code %in% shared_codes)
+anx_dep_shared_codes <- intersect(df_anx_proms_cod$code, df_dep_proms_cod$code)
+txt_anx_dep_n_shared_codes <- length(anx_dep_shared_codes)
+txt_anx_n_codes <- n_distinct(df_anx_proms_cod$code)
+txt_anx_n_declined_codes <- n_distinct(df_anx_proms_declined_cod$code)
+txt_dep_n_codes <- n_distinct(df_dep_proms_cod$code)
+txt_dep_n_declined_codes <- n_distinct(df_dep_proms_declined_cod$code)
+txt_anx_shared_overall_pct <- usage_share(df_anx_events, snomed_code %in% anx_dep_shared_codes)
+txt_dep_shared_overall_pct <- usage_share(df_dep_events, snomed_code %in% anx_dep_shared_codes)
 ```
 
-Codelists were created following guidance on codelist development [@Matthewman2024] and published on [OpenCodelists.org](https://www.opencodelists.org).
-We identified search terms and specific SNOMED CT codes from NICE guidelines [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022], the NHS TT manual [@NationalCollaboratingCentreForMentalHealth2024], and the [NHS Primary Care Domain Reference Set](https://digital.nhs.uk/data-and-information/data-collections-and-data-sets/data-collections/quality-and-outcomes-framework-qof/quality-and-outcome-framework-qof-business-rules/primary-care-domain-reference-set-portal) for anxiety and depression screening codes (Supplementary @tbls-nhs-reference-sets).
+Codelists were created following guidance on codelist development [@Matthewman2024].
+We identified search terms and specific SNOMED CT codes from NICE guidelines [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022], the NHS TT manual [@NationalCollaboratingCentreForMentalHealth2024], and the [NHS Primary Care Domain Reference Set](https://digital.nhs.uk/data-and-information/data-collections-and-data-sets/data-collections/quality-and-outcomes-framework-qof/quality-and-outcome-framework-qof-business-rules/primary-care-domain-reference-set-portal) for anxiety and depression screening codes (Supplementary @tbls-anx-dep-nhs-refsets).
 We also consulted a general practitioner to identify additional clinically relevant search terms.
 For each condition, two codelists were developed: one capturing PROMs activity codes indicating completed assessments and recorded scores, and one capturing declined assessments.
-All four codelists developed in this study are published on OpenCodelists and available for reuse (Supplementary @tbls-study-codelists).
+All four codelists developed in this study are published on OpenCodelists and available for reuse (Supplementary @tbls-anx-dep-study-codelists).
 
-**PROMs for anxiety disorders.** The activity codelist included `r n_distinct(proms_anx_cod$term)` SNOMED CT codes, including the GAD-7 and GAD-2 [@Spitzer2006], disorder-specific instruments recommended for panic disorder, obsessive-compulsive disorder, and posttraumatic stress disorder [@NationalCollaboratingCentreForMentalHealth2024].
-The declined assessments codelist included `r n_distinct(proms_anx_declined_cod$code)` codes indicating that an assessment was offered but not completed.
+**PROMs for anxiety disorders.** The activity codelist included `r txt_anx_n_codes` SNOMED CT codes, including the GAD-7 and GAD-2 [@Spitzer2006], disorder-specific instruments recommended for panic disorder, obsessive-compulsive disorder, and posttraumatic stress disorder [@NationalCollaboratingCentreForMentalHealth2024].
+The declined assessments codelist included `r txt_anx_n_declined_codes` codes indicating that an assessment was offered but not completed.
 
-**PROMs for depression.** The activity codelist included `r n_distinct(proms_dep_cod$code)` SNOMED CT codes, including the PHQ-9 [@Kroenke2001], BDI-II [@Beck1996], and HADS-D [@Zigmond1983], as well as postnatal depression measures, and broader depression screening concepts.
-The declined assessments codelist included `r n_distinct(proms_dep_declined_cod$code)` codes indicating that an assessment was offered but not completed.
+**PROMs for depression.** The activity codelist included `r txt_dep_n_codes` SNOMED CT codes, including the PHQ-9 [@Kroenke2001], BDI-II [@Beck1996], and HADS-D [@Zigmond1983], as well as postnatal depression measures, and broader depression screening concepts.
+The declined assessments codelist included `r txt_dep_n_declined_codes` codes.
 
 ### Data analyses
 
 ```{r}
 #| label: methods-data-analyses
-N_TOP_CODES_TABLE <- 10
+N_TOP_CODES_TAB <- 10
 N_TOP_CODES_FIG <- 3
+txt_anx_dep_n_linked_codes <- length(dict_linked_codes)
 ```
 
-We identified the `r N_TOP_CODES_TABLE` most frequently recorded codes for the activity and declined codelists for anxiety disorders and depression PROMs.
+We combined the usage of `r txt_anx_dep_n_linked_codes` pairs of identical codes as specified in the [SNOMED CT History Substitution Table](https://isd.digital.nhs.uk/trud/users/guest/filters/0/categories/8/items/276/releases) or identified by manual review.
+We identified the `r N_TOP_CODES_TAB` most frequently recorded codes for the activity and declined codelists for anxiety disorders and depression PROMs.
 We plotted the annual activity broken down by semantic tag including "observable entity", "procedure", and all other tags.
 Observable entity codes were interpreted as recorded numeric PROMs scores and procedure codes as an indicator for broader assessment activity.
-Annual usage counts for the `r N_TOP_CODES_FIG` most frequently recorded activity codes were also plotted to examine trends for specific PROMs over time.
+Annual usage counts for the `r N_TOP_CODES_FIG` most frequently recorded activity codes were also plotted.
 All analysis code and clinical codelists are openly available at <https://github.com/bennettoxford/proms-primary-care-public-data>.
 
 ## Results
@@ -499,48 +372,50 @@ All analysis code and clinical codelists are openly available at <https://github
 
 ```{r}
 #| label: results-total-usage
-anx_top_pct <- usage_top_share(anx_events, N_TOP_CODES_TABLE)
-dep_top_pct <- usage_top_share(dep_events, N_TOP_CODES_TABLE)
+txt_anx_top_overall_pct <- usage_top_share(df_anx_events, N_TOP_CODES_TAB)
+txt_dep_top_overall_pct <- usage_top_share(df_dep_events, N_TOP_CODES_TAB)
 
-MAIN_TAGS <- c("observable entity", "procedure")
+MAIN_SEMANTIC_TAGS <- c("observable entity", "procedure")
 
-anx_obs_pct <- usage_share(anx_events, semantic_tag == "observable entity")
-dep_obs_pct <- usage_share(dep_events, semantic_tag == "observable entity")
-dep_proc_pct <- usage_share(dep_events, semantic_tag == "procedure")
-anx_other_pct <- usage_share(anx_events, !semantic_tag %in% MAIN_TAGS)
-dep_other_pct <- usage_share(dep_events, !semantic_tag %in% MAIN_TAGS)
+df_anx_events_last <- filter(df_anx_events, year == year(END_DATE))
+df_dep_events_last <- filter(df_dep_events, year == year(END_DATE))
+
+txt_anx_score_last_pct <- usage_share(df_anx_events_last, semantic_tag == "observable entity")
+txt_dep_score_last_pct <- usage_share(df_dep_events_last, semantic_tag == "observable entity")
+txt_dep_proc_last_pct <- usage_share(df_dep_events_last, semantic_tag == "procedure")
+txt_anx_other_last_pct <- usage_share(df_anx_events_last, !semantic_tag %in% MAIN_SEMANTIC_TAGS)
+txt_dep_other_last_pct <- usage_share(df_dep_events_last, !semantic_tag %in% MAIN_SEMANTIC_TAGS)
 ```
 
-Using the codelists developed in this study, we identified `r dep_total` depression-related and `r anx_total` anxiety disorder-related PROMs recording instances between `r format(START_DATE_EHR, "%B %Y")` and `r format(END_DATE_EHR, "%B %Y")`.
-Depression-related PROMs codes were recorded approximately `r ratio_dep_anx_rounded` times as often as anxiety disorder-related codes.
-For both condition groups, almost all recording instances were captured by the `r N_TOP_CODES_TABLE` most frequently used codes, which represented `r anx_top_pct` and `r dep_top_pct` of recording instances for anxiety disorders and depression respectively (@tbl-top-proms-ehr-anx-dep).
+We identified `r txt_dep_overall` depression-related and `r txt_anx_overall` anxiety disorder-related PROMs recording instances between `r format(START_DATE, "%B %Y")` and `r format(END_DATE, "%B %Y")`.
+For both condition groups, almost all recording instances were captured by the `r N_TOP_CODES_TAB` most frequently used codes, which represented `r txt_anx_top_overall_pct` and `r txt_dep_top_overall_pct` of recording instances for anxiety disorders and depression respectively (@tbl-anx-dep-top).
 
-Anxiety disorder PROMs recording was predominantly represented by observable entity concepts (`r anx_obs_pct`), such as "*GAD-7 score*" and "*GAD-2 score*".
-In contrast, depression PROMs recording was mainly split between procedure and observable entity concepts (`r dep_proc_pct` procedure, `r dep_obs_pct` observable entity), such as "*Depression screening using questions*" and "*PHQ-9 score*".
-Situation, finding, and assessment scale semantic tag concepts accounted for `r anx_other_pct` of anxiety disorder and `r dep_other_pct` of depression recorded events.
+In `r format(END_DATE, "%B %Y")`, anxiety disorder PROMs recording was predominantly represented by observable entity concepts (`r txt_anx_score_last_pct`), such as "*GAD-7 score*" and "*GAD-2 score*".
+Depression PROMs recording was also mainly represented by observable entity concepts (`r txt_dep_score_last_pct`), with fewer procedure concepts (`r txt_dep_proc_last_pct`), such as "*PHQ-9 score*" and "*Depression screening using questions*".
+Situation, finding, and assessment scale semantic tag concepts accounted for `r txt_anx_other_last_pct` of anxiety disorder and `r txt_dep_other_last_pct` of depression recorded events.
 
 
 ```{r}
-#| label: tbl-top-proms-ehr-anx-dep
+#| label: tbl-anx-dep-top
 #| echo: false
-#| tbl-cap: !expr 'paste0("Top ten recorded SNOMED CT PROMs codes for anxiety disorders and depression in England from ", format(START_DATE_EHR, "%B %Y"), " to ", format(END_DATE_EHR, "%B %Y"), ".")'
+#| tbl-cap: !expr 'paste0("Top ten recorded SNOMED CT PROMs codes for anxiety disorders and depression in England from ", format(START_DATE, "%B %Y"), " to ", format(END_DATE, "%B %Y"), ".")'
 #| message: false
 #| warning: false
-top_proms_ehr_anx_dep <- df_proms_ehr_anx_dep_all_total |>
+df_tab_anx_dep_top <- df_anx_dep_overall |>
   group_by(condition) |>
   slice_max(
-    order_by = total_usage,
-    n = N_TOP_CODES_TABLE,
+    order_by = overall_usage,
+    n = N_TOP_CODES_TAB,
     with_ties = FALSE
   ) |>
   ungroup() |>
-  select(-value, -codelist) |>
+  select(-type) |>
   mutate(
     semantic_tag = str_to_sentence(semantic_tag),
-    description_short = recode(description_short, !!!description_dict_ehr),
+    description_short = recode(description_short, !!!dict_snomed_description),
     condition = factor(
       condition,
-      levels = c("proms_anx", "proms_dep"),
+      levels = c("anx", "dep"),
       labels = c(
         "PROMs codes for anxiety disorders",
         "PROMs codes for depression"
@@ -548,7 +423,7 @@ top_proms_ehr_anx_dep <- df_proms_ehr_anx_dep_all_total |>
     )
   )
 
-tab_top_proms_ehr_anx_dep <- top_proms_ehr_anx_dep |>
+tab_anx_dep_top <- df_tab_anx_dep_top |>
   mutate(
     description_short = description_short
   ) |>
@@ -558,36 +433,36 @@ tab_top_proms_ehr_anx_dep <- top_proms_ehr_anx_dep |>
   cols_label(
     description_short = "Description",
     semantic_tag = "Semantic tag",
-    total_usage = "Usage",
-    ratio_usage = "%"
+    overall_usage = "Usage",
+    share_usage = "%"
   ) |>
   cols_align(align = "left", columns = c(description_short, semantic_tag)) |>
-  cols_align(align = "right", columns = c(total_usage, ratio_usage)) |>
+  cols_align(align = "right", columns = c(overall_usage, share_usage)) |>
   tab_style(
     style = cell_text(indent = px(15)),
     locations = cells_body(columns = description_short)
   ) |>
-  fmt_number(total_usage, decimals = 0) |>
-  fmt_percent(columns = ratio_usage, decimals = 1) |>
+  fmt_number(overall_usage, decimals = 0) |>
+  fmt_percent(columns = share_usage, decimals = 1) |>
   tab_source_note(
     source_note = md(
-      "*Notes*. GAD = Generalised Anxiety Disorder; HADS = Hospital Anxiety and Depression Scale; PHQ = Patient Health Questionnaire; EPDS = Edinburgh Postnatal Depression Scale. EQ-5D-5L = EuroQol five dimension five level. Percentage usage of PROMs is calculated separately for anxiety disorders and depression, using all recorded events for that condition as the denominator."
+      "*Notes*. GAD = Generalised Anxiety Disorder; HADS = Hospital Anxiety and Depression Scale; PHQ = Patient Health Questionnaire; EPDS = Edinburgh Postnatal Depression Scale; EQ-5D-5L = EuroQol five dimension five level. Percentage usage of PROMs is calculated separately for anxiety disorders and depression, using all recorded events for that condition as the denominator."
     )
   ) |>
   style_manuscript_table()
 
 gtsave(
-  tab_top_proms_ehr_anx_dep,
-  here("output", "tables", "tab-top-proms-ehr-anx-dep.png")
+  tab_anx_dep_top,
+  here("output", "tables", "tab-anx-dep-top.png")
 )
 
 if (knitr::is_html_output() | knitr::is_latex_output()) {
-  tab_top_proms_ehr_anx_dep
+  tab_anx_dep_top
 } else {
   knitr::include_graphics(here(
     "output",
     "tables",
-    "tab-top-proms-ehr-anx-dep.png"
+    "tab-anx-dep-top.png"
   ))
 }
 ```
@@ -596,146 +471,129 @@ if (knitr::is_html_output() | knitr::is_latex_output()) {
 
 ```{r}
 #| label: results-annual-trends-overall
-dep_2012 <- usage_total(dep_events, year == 2012)
-dep_2014 <- usage_total(dep_events, year == 2014)
-dep_last <- usage_total(dep_events, year == year(END_DATE_EHR))
-anx_last <- usage_total(anx_events, year == year(END_DATE_EHR))
-
-dep_proc_2012 <- usage_total(
-  dep_events,
+txt_dep_2012 <- usage_total(df_dep_events, year == 2012)
+txt_dep_2014 <- usage_total(df_dep_events, year == 2014)
+txt_dep_proc_2012 <- usage_total(
+  df_dep_events,
   type == "activity",
   semantic_tag == "procedure",
   year == 2012
 )
-dep_proc_last <- usage_total(
-  dep_events,
+txt_dep_proc_last <- usage_total(
+  df_dep_events,
   type == "activity",
   semantic_tag == "procedure",
-  year == year(END_DATE_EHR)
+  year == year(END_DATE)
 )
-dep_score_2012 <- usage_total(
-  dep_events,
+txt_dep_score_2012 <- usage_total(
+  df_dep_events,
   type == "activity",
   semantic_tag == "observable entity",
   year == 2012
 )
-dep_score_2016 <- usage_total(
-  dep_events,
+txt_dep_score_2016 <- usage_total(
+  df_dep_events,
   type == "activity",
   semantic_tag == "observable entity",
   year == 2016
 )
-dep_score_last <- usage_total(
-  dep_events,
+txt_dep_score_last <- usage_total(
+  df_dep_events,
   type == "activity",
   semantic_tag == "observable entity",
-  year == year(END_DATE_EHR)
+  year == year(END_DATE)
 )
-anx_score_2012 <- usage_total(
-  anx_events,
+txt_anx_score_2012 <- usage_total(
+  df_anx_events,
   type == "activity",
   semantic_tag == "observable entity",
   year == 2012
 )
-anx_score_last <- usage_total(
-  anx_events,
+txt_anx_score_last <- usage_total(
+  df_anx_events,
   type == "activity",
   semantic_tag == "observable entity",
-  year == year(END_DATE_EHR)
+  year == year(END_DATE)
 )
 
-anx_proc_max <- usage_max(
-  anx_events,
+txt_anx_proc_max <- usage_max(
+  df_anx_events,
   type == "activity",
   semantic_tag == "procedure",
   .by = year
 )
-anx_declined_max <- usage_max(anx_events, type == "declined", .by = year)
-dep_declined_max <- usage_max(dep_events, type == "declined", .by = year)
+txt_anx_declined_max <- usage_max(df_anx_events, type == "declined", .by = year)
+txt_dep_declined_max <- usage_max(df_dep_events, type == "declined", .by = year)
 
-declined_one_in <- events_proms_ehr |>
-  filter(year == year(END_DATE_EHR)) |>
+txt_anx_dep_declined_one_in_last_rounded <- df_anx_dep_events |>
+  filter(year == year(END_DATE)) |>
   summarise(one_in = sum(usage) / sum(usage[type == "declined"])) |>
   pull(one_in) |>
   round()
 ```
 
-Annual trends showed higher depression-related PROMs coding than anxiety disorder-related PROMs coding throughout the study period.
-However, depression-related PROMs coding declined from `r dep_2012` recorded events in July 2012 to `r dep_2014` by July 2014, increasing slowly to `r dep_last` in `r format(END_DATE_EHR, "%B %Y")`.
-In contrast, anxiety disorder PROMs recording remained lower but increased over time, reaching `r anx_last` recorded events by `r format(END_DATE_EHR, "%B %Y")` (@fig-proms-ehr-anx-dep-trends, Panel A).
+Annual trends showed higher depression-related PROMs coding than anxiety disorder-related coding throughout the study period.
+However, depression-related PROMs coding declined from `r txt_dep_2012` recorded events in July 2012 to `r txt_dep_2014` by July 2014, increasing slowly to `r txt_dep_last` in `r format(END_DATE, "%B %Y")`.
+In contrast, anxiety disorder PROMs recording remained lower but increased over time, reaching `r txt_anx_last` recorded events by `r format(END_DATE, "%B %Y")` (@fig-anx-dep-trends, Panel A).
 
-PROMs for depression were initially most often recorded as procedures, but this declined substantially from `r dep_proc_2012` in July 2012 to `r dep_proc_last` in `r format(END_DATE_EHR, "%B %Y")` (@fig-proms-ehr-anx-dep-trends, Panel C).
-Depression-related PROMs with scores (observable entity) declined from `r dep_score_2012` in July 2012 to `r dep_score_2016` in July 2016, before increasing again to `r dep_score_last` by `r format(END_DATE_EHR, "%B %Y")` (@fig-proms-ehr-anx-dep-trends, Panel B).
-Anxiety disorder PROMs were rarely recorded as procedures, with no more than `r anx_proc_max` recorded events in any year of the study period, while codes with scores (observable entity) increased from `r anx_score_2012` in July 2012 to `r anx_score_last` in `r format(END_DATE_EHR, "%B %Y")` (@fig-proms-ehr-anx-dep-trends, Panel B-C).
-Together, these trends show a shift from procedure codes towards observable entity codes recording numeric PROMs scores, most evident for depression (@fig-proms-ehr-anx-dep-trends, Panels B-C).
-Declined PROMs recording increased over the study period but remained low, reaching at most `r dep_declined_max` recorded events in any year for depression and `r anx_declined_max` for anxiety disorders (Supplementary @figa-proms-ehr-anx-dep-declined).
-This represented 1 in `r declined_one_in` recorded PROMs codes by `r format(END_DATE_EHR, "%B %Y")`.
+PROMs for depression were initially most often recorded as procedures, but this declined substantially from `r txt_dep_proc_2012` in July 2012 to `r txt_dep_proc_last` in `r format(END_DATE, "%B %Y")` (@fig-anx-dep-trends, Panel C).
+Depression-related PROMs with scores (observable entity) declined from `r txt_dep_score_2012` in July 2012 to `r txt_dep_score_2016` in July 2016, before increasing again to `r txt_dep_score_last` by `r format(END_DATE, "%B %Y")` (@fig-anx-dep-trends, Panel B).
+Anxiety disorder PROMs were rarely recorded as procedures, with no more than `r txt_anx_proc_max` recorded events in any year, while codes with scores increased from `r txt_anx_score_2012` in July 2012 to `r txt_anx_score_last` in `r format(END_DATE, "%B %Y")` (@fig-anx-dep-trends, Panel B-C).
+Together, these trends show a shift from procedure codes towards observable entity codes recording numeric PROMs scores, most evident for depression.
+Declined PROMs recording increased over the study period but remained low, reaching at most `r txt_dep_declined_max` recorded events in any year for depression and `r txt_anx_declined_max` for anxiety disorders (Supplementary @figs-anx-dep-declined).
+This represented 1 in `r txt_anx_dep_declined_one_in_last_rounded` recorded PROMs codes by `r format(END_DATE, "%B %Y")`.
 
 ```{r}
-#| label: fig-proms-ehr-anx-dep-trends
+#| label: fig-anx-dep-trends
 #| echo: false
-#| fig-cap: !expr 'paste0("Yearly recorded events for PROMs codes for anxiety disorders and depression in English general practice from ", format(START_DATE_EHR, "%B %Y"), " to ", format(END_DATE_EHR, "%B %Y"), ". (A) Total PROMs coding, including all activity and declined codes; (B) score codes, which are observable entity concepts representing recorded PROM scores; and (C) procedure codes, representing PROM administration. No procedure code events were recorded for anxiety disorders before 2013. Note that the range of the y-axis varies across panels.")'
+#| fig-cap: !expr 'paste0("Yearly recorded events for PROMs codes for anxiety disorders and depression in English general practice from ", format(START_DATE, "%B %Y"), " to ", format(END_DATE, "%B %Y"), ". (A) Total PROMs coding, including all activity and declined codes; (B) score codes, which are observable entity concepts representing recorded PROM scores; and (C) procedure codes, representing PROM administration. No procedure code events were recorded for anxiety disorders before 2013. Panels B and C share the same y-axis range, which differs from Panel A.")'
 #| fig-height: 9
 #| fig-width: 8
 #| warning: false
-fig_proms_ehr_anx_dep_total <- df_fig_proms_ehr_anx_dep_all |>
-  mutate(
-    codelist = factor(
-      codelist,
-      levels = c(
-        proms_ehr_activity_codelist_levels,
-        proms_ehr_declined_codelist_levels
-      ),
-      labels = c(codelist_labels_ehr, codelist_labels_ehr)
-    )
-  ) |>
+fig_anx_dep_total <- df_anx_dep_usage |>
   plot_usage_trend(
     x = end_date,
     y = usage,
-    group = codelist,
+    group = condition_label,
     panel_label = "Total PROMs coding",
-    x_breaks = x_breaks_ehr
+    x_breaks = x_breaks
   ) +
+  scale_colour_viridis_d(end = .6) +
   theme(axis.text.x = element_blank())
 
-fig_proms_ehr_anx_dep_obs_ent <- df_fig_proms_ehr_anx_dep_activity |>
-  mutate(
-    codelist = factor(
-      codelist,
-      levels = proms_ehr_activity_codelist_levels,
-      labels = codelist_labels_ehr
-    )
-  ) |>
-  filter(semantic_tag == "observable entity") |>
+fig_anx_dep_obs_ent <- df_anx_dep_usage |>
+  filter(type == "activity", semantic_tag == "observable entity") |>
   plot_usage_trend(
     x = end_date,
     y = usage,
-    group = codelist,
+    group = condition_label,
     panel_label = "PROMs coded with scores",
-    x_breaks = x_breaks_ehr
+    x_breaks = x_breaks
   ) +
+  scale_colour_viridis_d(end = .6) +
   theme(axis.text.x = element_blank())
 
-fig_proms_ehr_anx_dep_proc <- df_fig_proms_ehr_anx_dep_activity |>
-  mutate(
-    codelist = factor(
-      codelist,
-      levels = proms_ehr_activity_codelist_levels,
-      labels = codelist_labels_ehr
-    )
-  ) |>
-  filter(semantic_tag == "procedure") |>
+fig_anx_dep_proc <- df_anx_dep_usage |>
+  filter(type == "activity", semantic_tag == "procedure") |>
   plot_usage_trend(
     x = end_date,
     y = usage,
-    group = codelist,
+    group = condition_label,
     panel_label = "PROMs coded as procedures",
-    x_breaks = x_breaks_ehr
-  )
+    x_breaks = x_breaks
+  ) +
+  scale_colour_viridis_d(end = .6)
 
-fig_proms_ehr_anx_dep_trends <- (fig_proms_ehr_anx_dep_total /
-  fig_proms_ehr_anx_dep_obs_ent /
-  fig_proms_ehr_anx_dep_proc) +
+y_max_obs_ent_proc <- max(
+  fig_anx_dep_obs_ent$data$.usage,
+  fig_anx_dep_proc$data$.usage
+)
+
+fig_anx_dep_trends <- (fig_anx_dep_total /
+  (fig_anx_dep_obs_ent +
+    coord_cartesian(ylim = c(0, y_max_obs_ent_proc))) /
+  (fig_anx_dep_proc +
+    coord_cartesian(ylim = c(0, y_max_obs_ent_proc)))) +
   plot_layout(guides = "collect", axis_titles = "collect") +
   plot_annotation(tag_levels = list(c("A", "B", "C"))) &
   theme(
@@ -743,15 +601,15 @@ fig_proms_ehr_anx_dep_trends <- (fig_proms_ehr_anx_dep_total /
     plot.tag = element_text(margin = margin(r = 8))
   )
 
-fig_proms_ehr_anx_dep_trends
+fig_anx_dep_trends
 
 ggsave(
   filename = here(
     "output",
     "figures",
-    "fig-proms-ehr-anx-dep-trends.png"
+    "fig-anx-dep-trends.png"
   ),
-  fig_proms_ehr_anx_dep_trends,
+  fig_anx_dep_trends,
   height = 9,
   width = 8
 )
@@ -761,64 +619,160 @@ ggsave(
 
 ```{r}
 #| label: results-annual-trends-codes
-CODE_HADS_ANX <- "401319005"
-CODE_HADS_DEP <- "401320004"
-CODE_PHQ9 <- "720433000"
+# Hospital Anxiety and Depression scale: anxiety score
+CODE_ANX_HADS <- "401319005"
+# Patient Health Questionnaire-2 score
+CODE_DEP_PHQ2 <- "1359723003"
+# Patient Health Questionnaire Nine Item score
+CODE_DEP_PHQ9 <- "720433000"
+# Depression screening using questions
 CODE_DEP_SCREEN <- "200971000000100"
 
-hads_anx_max <- usage_max(anx_events, snomed_code == CODE_HADS_ANX, .by = year)
-hads_dep_max <- usage_max(dep_events, snomed_code == CODE_HADS_DEP, .by = year)
-dep_screen_last <- usage_total(
-  dep_events,
+txt_anx_hads_max <- usage_max(df_anx_events, snomed_code == CODE_ANX_HADS, .by = year)
+txt_dep_phq2_first_year <- df_dep_events |>
+  filter(snomed_code == CODE_DEP_PHQ2, usage > 0) |>
+  summarise(year = min(year)) |>
+  pull(year)
+txt_dep_phq2_last <- usage_total(
+  df_dep_events,
+  snomed_code == CODE_DEP_PHQ2,
+  year == year(END_DATE)
+)
+txt_dep_screen_last <- usage_total(
+  df_dep_events,
   snomed_code == CODE_DEP_SCREEN,
-  year == year(END_DATE_EHR)
+  year == year(END_DATE)
 )
 
-year_phq9_overtakes <- dep_events |>
-  filter(snomed_code %in% c(CODE_PHQ9, CODE_DEP_SCREEN)) |>
-  mutate(code = if_else(snomed_code == CODE_PHQ9, "phq9", "screening")) |>
+txt_dep_phq9_overtakes_year <- df_dep_events |>
+  filter(snomed_code %in% c(CODE_DEP_PHQ9, CODE_DEP_SCREEN)) |>
+  mutate(code = if_else(snomed_code == CODE_DEP_PHQ9, "phq9", "screening")) |>
   select(year, code, usage) |>
   pivot_wider(names_from = code, values_from = usage) |>
   filter(phq9 > screening) |>
   slice_min(year) |>
   pull(year)
+txt_dep_phq9_2012 <- usage_total(
+  df_dep_events,
+  snomed_code == CODE_DEP_PHQ9,
+  year == 2012
+)
+txt_dep_phq9_last <- usage_total(
+  df_dep_events,
+  snomed_code == CODE_DEP_PHQ9,
+  year == year(END_DATE)
+)
+txt_dep_phq2_overtakes_year <- df_dep_events |>
+  filter(snomed_code %in% c(CODE_DEP_PHQ2, CODE_DEP_SCREEN)) |>
+  mutate(code = if_else(snomed_code == CODE_DEP_PHQ2, "phq2", "screening")) |>
+  select(year, code, usage) |>
+  pivot_wider(names_from = code, values_from = usage) |>
+  filter(phq2 > screening) |>
+  slice_min(year) |>
+  pull(year)
+
+# Active codes only, as combine_linked_codes() counts old codes under these
+CODES_PHQ2 <- c(
+  # Patient Health Questionnaire-2 score
+  "1359723003",
+  # Assessment using Patient Health Questionnaire-2
+  "1359724009",
+  # Patient Health Questionnaire-2
+  "1359725005"
+)
+CODES_GAD2 <- c(
+  # Generalized Anxiety Disorder 2 item score
+  "1365837005",
+  # Assessment using Generalized Anxiety Disorder 2 item scale
+  "1365839008",
+  # Generalized Anxiety Disorder 2 item scale
+  "1365853008"
+)
+CODES_PHQ4 <- c(
+  # Patient Health Questionnaire-4 score
+  "1359726006",
+  # Assessment using Patient Health Questionnaire-4
+  "865934004",
+  # Patient Health Questionnaire-4
+  "865935003"
+)
+CODES_WHOOLEY <- c(
+  # Whooley Depression Screen positive
+  "143661000000100",
+  # Whooley Depression Screen negative
+  "143671000000107",
+  # Whooley depression screen
+  "450752004",
+  # Assessment using Whooley depression screen
+  "792491000000100",
+  # Whooley depression screen score
+  "803351000000106"
+)
+CODES_SHORT <- c(CODES_PHQ2, CODES_GAD2, CODES_PHQ4, CODES_WHOOLEY)
+
+usage_short_share <- function(data, event_year) {
+  data |>
+    filter(type == "activity", year == event_year) |>
+    usage_share(snomed_code %in% CODES_SHORT)
+}
+
+txt_anx_short_2012_pct <- usage_short_share(df_anx_events, 2012)
+txt_dep_short_2012_pct <- usage_short_share(df_dep_events, 2012)
+txt_anx_short_last_pct <- usage_short_share(df_anx_events, year(END_DATE))
+txt_dep_short_last_pct <- usage_short_share(df_dep_events, year(END_DATE))
+
+txt_dep_phq2_whooley_ratio_last_rounded <- round(
+  usage_total(
+    df_dep_events,
+    snomed_code %in% CODES_PHQ2,
+    year == year(END_DATE),
+    .format_as_str = FALSE
+  ) /
+    usage_total(
+      df_dep_events,
+      snomed_code %in% CODES_WHOOLEY,
+      year == year(END_DATE),
+      .format_as_str = FALSE
+    )
+)
 ```
 
-@fig-top-proms-ehr-anx-dep-trends shows yearly trends from `r format(START_DATE_EHR, "%B %Y")` to `r format(END_DATE_EHR, "%B %Y")` in recorded events for the `r N_TOP_CODES_FIG` most frequently recorded PROMs SNOMED CT codes, shown separately for anxiety disorders and depression.
+@fig-anx-dep-top-trends shows yearly trends in recorded events for the `r N_TOP_CODES_FIG` most frequently recorded PROMs SNOMED CT codes.
 
 ```{r}
-#| label: fig-top-proms-ehr-anx-dep-trends
+#| label: fig-anx-dep-top-trends
 #| echo: false
-#| fig-cap: !expr paste0("Yearly recorded events for the ", N_TOP_CODES_FIG, " most frequently recorded PROMs activity codes for anxiety disorders and depression in English general practice from ", format(START_DATE_EHR, "%B %Y"), " to ", format(END_DATE_EHR, "%B %Y"), ". Note that the range of the y-axis varies across panels.")
+#| fig-cap: !expr paste0("Yearly recorded events for the ", N_TOP_CODES_FIG, " most frequently recorded PROMs activity codes for anxiety disorders and depression in English general practice from ", format(START_DATE, "%B %Y"), " to ", format(END_DATE, "%B %Y"), ".")
 #| fig-height: 8
 #| fig-width: 8
 #| warning: false
-top_3_proms_ehr_anx_codes <- df_proms_ehr_anx_dep_activity_total |>
-  filter(codelist == "proms_anx_cod") |>
+anx_top_codes <- df_anx_dep_overall |>
+  filter(type == "activity", condition == "anx") |>
   slice_max(
-    order_by = total_usage,
+    order_by = overall_usage,
     n = N_TOP_CODES_FIG,
     with_ties = FALSE
   ) |>
   pull(snomed_code)
 
-top_3_proms_ehr_dep_codes <- df_proms_ehr_anx_dep_activity_total |>
-  filter(codelist == "proms_dep_cod") |>
+dep_top_codes <- df_anx_dep_overall |>
+  filter(type == "activity", condition == "dep") |>
   slice_max(
-    order_by = total_usage,
+    order_by = overall_usage,
     n = N_TOP_CODES_FIG,
     with_ties = FALSE
   ) |>
   pull(snomed_code)
 
 
-df_fig_top_3_ehr_anx_activity <- df_proms_ehr_anx_dep_activity |>
+df_fig_anx_top <- df_anx_dep_usage |>
   filter(
-    proms_anx_cod,
-    snomed_code %in% top_3_proms_ehr_anx_codes
+    type == "activity",
+    condition == "anx",
+    snomed_code %in% anx_top_codes
   ) |>
   mutate(
-    description_short = recode(description_short, !!!description_dict_ehr),
+    description_short = recode(description_short, !!!dict_snomed_description),
     codelist = fct_reorder(
       paste0(description_short, " (", str_to_sentence(semantic_tag), ")"),
       usage,
@@ -827,13 +781,14 @@ df_fig_top_3_ehr_anx_activity <- df_proms_ehr_anx_dep_activity |>
     )
   )
 
-df_fig_top_3_ehr_dep_activity <- df_proms_ehr_anx_dep_activity |>
+df_fig_dep_top <- df_anx_dep_usage |>
   filter(
-    proms_dep_cod,
-    snomed_code %in% top_3_proms_ehr_dep_codes
+    type == "activity",
+    condition == "dep",
+    snomed_code %in% dep_top_codes
   ) |>
   mutate(
-    description_short = recode(description_short, !!!description_dict_ehr),
+    description_short = recode(description_short, !!!dict_snomed_description),
     codelist = fct_reorder(
       paste0(description_short, " (", str_to_sentence(semantic_tag), ")"),
       usage,
@@ -842,132 +797,140 @@ df_fig_top_3_ehr_dep_activity <- df_proms_ehr_anx_dep_activity |>
     )
   )
 
-fig_top_proms_ehr_anx_trends <- df_fig_top_3_ehr_anx_activity |>
+fig_anx_top <- df_fig_anx_top |>
   plot_usage_trend(
     x = end_date,
     y = usage,
     group = codelist,
     panel_label = "PROMs for anxiety disorders",
-    x_breaks = x_breaks_ehr
+    x_breaks = x_breaks
   ) +
+  scale_colour_paletteer_d("RColorBrewer::Set1") +
   theme(legend.position = "bottom") +
   guides(
     colour = guide_legend(nrow = 2, byrow = TRUE),
     shape = guide_legend(nrow = 2, byrow = TRUE)
   )
 
-fig_top_proms_ehr_dep_trends <- df_fig_top_3_ehr_dep_activity |>
+fig_dep_top <- df_fig_dep_top |>
   plot_usage_trend(
     x = end_date,
     y = usage,
     group = codelist,
     panel_label = "PROMs for depression",
-    x_breaks = x_breaks_ehr
+    x_breaks = x_breaks
   ) +
+  scale_colour_paletteer_d("RColorBrewer::Set1") +
   theme(legend.position = "bottom") +
   guides(
     colour = guide_legend(nrow = 2, byrow = TRUE),
     shape = guide_legend(nrow = 2, byrow = TRUE)
   )
 
-fig_top_proms_ehr_anx_dep_trends <- (fig_top_proms_ehr_anx_trends /
-  fig_top_proms_ehr_dep_trends) +
+y_max_top_trends <- max(fig_anx_top$data$.usage, fig_dep_top$data$.usage)
+
+fig_anx_dep_top_trends <- (fig_anx_top /
+  fig_dep_top) +
   plot_layout(axis_titles = "collect") +
   plot_annotation(tag_levels = list(c("A", "B"))) &
+  coord_cartesian(ylim = c(0, y_max_top_trends)) &
   theme(plot.tag = element_text(margin = margin(r = 8)))
 
-fig_top_proms_ehr_anx_dep_trends
+fig_anx_dep_top_trends
 
 ggsave(
   filename = here(
     "output",
     "figures",
-    "fig-top-proms-ehr-anx-dep-trends.png"
+    "fig-anx-dep-top-trends.png"
   ),
-  fig_top_proms_ehr_anx_dep_trends,
+  fig_anx_dep_top_trends,
   height = 8,
   width = 8
 )
 ```
 
-Among the PROMs codes for anxiety disorders, "*GAD-7 score*" was the most frequently recorded code throughout the study period and increased overall from July 2012 to July 2025 (@fig-top-proms-ehr-anx-dep-trends, Panel A).
+Among the PROMs codes for anxiety disorders, "*GAD-7 score*" was the most frequently recorded code throughout the study period and increased overall from July 2012 to `r format(END_DATE, "%B %Y")` (@fig-anx-dep-top-trends, Panel A).
 "*GAD-2 score*" recording appeared from July 2019 and increased thereafter.
-Both codes showed their most rapid increases from 2023-25.
-The remaining code ("*HADS anxiety score*") was recorded at lower volumes, with fewer than `r hads_anx_max` recorded events per year.
+Both codes showed their most rapid increases from 2023.
+The remaining code ("*HADS anxiety score*") was recorded at lower volumes, with no more than `r txt_anx_hads_max` recorded events per year.
 
-For the two most frequently used depression-related PROMs codes, recording declined between July 2012 and July 2014, consistent with the early decline in overall depression-related PROMs recording trends (@fig-proms-ehr-anx-dep-trends, Panel A). 
-However "*Depression screening using questions*" continued to decrease to `r dep_screen_last` by `r format(END_DATE_EHR, "%B %Y")`, whereas "*PHQ-9 score*" increased again and returned to a level similar to July 2012, the year before the QOF financial incentives for using PROMs were discontinued (@fig-top-proms-ehr-anx-dep-trends, Panel B).
-In July `r year_phq9_overtakes`, "*PHQ-9 score*" was recorded more often than "*Depression screening using questions*" for the first time.
-The remaining top depression PROMs code ("*HADS depression score*") was recorded at much lower levels, with fewer than `r hads_dep_max` recorded events per year.
+For the two most frequently used depression-related PROMs codes, recording declined between July 2012 and July 2014.
+However "*Depression screening using questions*" continued to decrease to `r txt_dep_screen_last` by `r format(END_DATE, "%B %Y")`, whereas "*PHQ-9 score*" increased again to `r txt_dep_phq9_last`, above its level of `r txt_dep_phq9_2012` in July 2012, the year before the QOF financial incentives for using PROMs were discontinued (@fig-anx-dep-top-trends, Panel B).
+In July `r txt_dep_phq9_overtakes_year`, "*PHQ-9 score*" was recorded more often than "*Depression screening using questions*" for the first time.
+The remaining top depression PROMs code ("*PHQ-2 score*") was first recorded in July `r txt_dep_phq2_first_year` and increased to `r txt_dep_phq2_last` by `r format(END_DATE, "%B %Y")`.
+In July `r txt_dep_phq2_overtakes_year`, it was recorded more often than "*Depression screening using questions*" for the first time.
+
+Short measures (PHQ-2, GAD-2, 4-item PHQ [PHQ-4] and Whooley screening) made up `r txt_anx_short_last_pct` of anxiety disorder and `r txt_dep_short_last_pct` of depression activity coding in `r format(END_DATE, "%B %Y")`, up from `r txt_anx_short_2012_pct` and `r txt_dep_short_2012_pct` in July 2012.
 
 ## Discussion
 
 ### Summary
 
-Using publicly available aggregate data, we described coding patterns for PROMs for anxiety disorders and depression in primary care records from 2011 to 2025.
+Using publicly available aggregate data, we described coding patterns for PROMs for anxiety disorders and depression in primary care records from `r year(START_DATE)` to `r year(END_DATE)`.
 Over the past 5 years, GAD-7 and PHQ-9 were the most frequently recorded PROMs annually for anxiety disorders and depression respectively.
-For anxiety disorders, "*GAD-7 score*" was the most frequently recorded PROM across the entire study period, both annually and cumulatively.
-While "*Depression screening using questions*" had the highest cumulative recording across the study period, "*PHQ-9 score*" was the most frequently recorded code annually from July `r year_phq9_overtakes` onwards.
+While "*Depression screening using questions*" had the highest cumulative recording across the study period, "*PHQ-9 score*" was the most frequently recorded code annually from July `r txt_dep_phq9_overtakes_year` onwards.
 Depression-related PROMs coding was consistently higher than anxiety disorder-related coding.
 Over the study period, recording shifted from broader procedure codes towards named PROMs score codes, most evident for depression.
-Recording of declined assessments increased over the study period but remained low.
 
 ### Comparison with existing literature
 
 Consistent with previous research [@Kendrick2009], most activity of assessing symptom severity in primary care was captured by a small number of PROMs.
-Although the NICE-recommended PHQ-9 and GAD-2 appeared among the most frequently used codes, the codes with the highest overall usage were the GAD-7 for anxiety disorders and "Depression screening using questions" for depression, in line with reported variation in PROMs use across general practice [@Turner2020].
+Although the NICE-recommended PHQ-9 and GAD-2 appeared among the most frequently used codes [@NationalInstituteForHealthAndCareExcellence2022; @NationalInstituteForHealthAndCareExcellence2020], the codes with the highest overall usage were the GAD-7 for anxiety disorders and "Depression screening using questions" for depression, in line with reported variation in PROMs use across general practice [@Turner2020].
 Of the three depression measures recommended for general practice use [@BritishMedicalAssociation2006], the PHQ-9 and HADS-D appeared among the most frequently recorded codes.
-This is consistent with assessment patterns observed under QOF, where the PHQ-9 accounted for most assessments and the BDI-II was rarely used [@Kendrick2009].
+This is consistent with assessment patterns observed under QOF, where the PHQ-9 accounted for most assessments [@Kendrick2009].
 The high use of PHQ-9 and GAD-7 may also reflect their role as standard outcome measures in NHS TT [@NationalCollaboratingCentreForMentalHealth2024].
-Although disorder-specific measures are recommended for conditions such as panic disorder, obsessive-compulsive disorder, and posttraumatic stress disorder [@NationalCollaboratingCentreForMentalHealth2024], these instruments were rarely recorded in general practice.
+Although disorder-specific measures are recommended for conditions such as posttraumatic stress disorder [@NationalCollaboratingCentreForMentalHealth2024], these instruments were rarely recorded in general practice.
 
-Depression PROMs coding was consistently higher than anxiety disorder PROMs across the study period, which may reflect the longer history of incentivised depression assessment in English general practice.
-A financial incentive for the use of validated depression questionnaires was introduced in 2006 and removed in 2013 [@Kendrick2009; @Kendrick2020].
-The early decline in depression coding we observed coincides with this change.
+Depression PROMs coding was consistently highest across the study period, potentially reflecting the earlier financial incentives [@Kendrick2009; @Kendrick2020].
+The early decline in depression coding we observed coincided with the removal of the incentive in 2013 [@Kendrick2009; @Kendrick2020].
 NICE guidance continued to recommend the use of routine outcome monitoring [@NationalInstituteForHealthAndCareExcellence2022], which may partly explain the persistence of PHQ-9 recording.
-Interestingly, recording of PHQ-9 scores recovered to levels similar to those observed when their use was incentivised by the QOF.
-Possible explanations might include psychological services placing greater value on symptom scores for referred patients, or evolving clinical practices around the use of symptom questionnaires in primary care.
+PHQ-9 score recording recovered to levels above those observed under QOF incentivisation.
+Possible explanations include psychological services placing greater value on symptom scores for referred patients, or changes in how symptom questionnaires are used in primary care.
 For example, recorded remote consultations in English general practice more than tripled during the COVID-19 pandemic [@Aminu2025].
-Patient communication platforms that integrate with clinical software used by general practitioners can send questionnaires by text message and write the score into the patient's EHR, including PHQ-9 and GAD-7 scores [@Davies2026].
-This may partly explain the observed recovery in score recording.
+Patient communication platforms enable patients to complete PROMs remotely, with scores written into the patient's EHR, including PHQ-9 and GAD-7 scores [@Davies2026].
 
-The increased coding of PROMs for anxiety disorders from 2011, particularly GAD-2 and GAD-7, is consistent with NICE recommendations for their use in anxiety assessments and routine outcome monitoring in primary care [@NationalInstituteForHealthAndCareExcellence2020; @Plummer2016].
-The rise in anxiety disorder PROMs coding also parallels broader increases in recorded anxiety diagnoses and symptoms in UK primary care from around 2011 [@Archer2022; @Slee2021].
-Despite these increases, anxiety disorder PROMs coding remained lower than depression PROMs coding.
-This contrasts with the Adult Psychiatric Morbidity Survey, in which the estimated prevalence was higher in 2023/24 for generalised anxiety disorder compared to depressive episodes at 8.5%, 4.4% respectively [@Morris2025].
+The increased coding of PROMs for anxiety disorders from 2011, particularly GAD-2 and GAD-7, is consistent with NICE recommendations to consider the GAD-2 and to monitor outcomes with short questionnaires [@NationalInstituteForHealthAndCareExcellence2020].
+The increase in anxiety disorder PROMs coding parallels broader increases in recorded anxiety diagnoses and symptoms in UK primary care from around 2011 [@Archer2022; @Slee2021].
+In addition, the estimated prevalence in England was higher for generalised anxiety disorder compared to depressive episodes in 2023/24 [@Morris2025].
+Nevertheless, anxiety disorder PROMs coding remained lower than depression PROMs coding.
 The discrepancy may reflect differences in the clinical pathways and incentives surrounding the assessment and monitoring of anxiety disorders and depression in primary care.
 
 A further pattern was a shift away from broader procedure codes towards named PROMs score codes, which better indicate what was assessed and may improve interpretability.
-In 2016, a Cochrane review found insufficient evidence that routine PROMs monitoring improves outcomes in common mental health disorders, with only two of 17 included studies conducted in primary care [@Kendrick2016].
-Since then, a cluster randomised trial in general practices in England and Wales found no significant effect of PHQ-9 monitoring on depression symptom outcomes, although patients' quality of life improved and in a post-hoc per-protocol analysis, recording of follow-up PHQ-9 scores led to more changes of treatment and referrals [@Kendrick2024a].
-Given the substantial growth in PROMs recording in general practice since 2016, large national studies using patient-level data could re-evaluate the impact of PROMs on patient outcomes in routine care.
+NICE recommends the Whooley screening in yes/no form, but PHQ-2 scores were recorded about `r txt_dep_phq2_whooley_ratio_last_rounded` times as often as Whooley codes in `r format(END_DATE, "%B %Y")`.
+<!-- TODO Milan: decide how to word this. Whooley screening may have been done and recorded under a generic code such as "Depression screening using questions", so we do not know how often it was used. That code cannot record a yes/no answer. -->
+Short measures are designed as a first step and not to monitor severity [@Kroenke2003], so their increase may not reflect better outcome monitoring.
+In 2016, a Cochrane review found insufficient evidence that routine PROMs monitoring improves outcomes in common mental health disorders, with only two of 17 studies conducted in primary care [@Kendrick2016].
+Since then, a cluster randomised trial in English and Welsh general practices found no significant effect of PHQ-9 monitoring on depression symptom outcomes, although patients' quality of life improved and in a post-hoc per-protocol analysis, recording of follow-up PHQ-9 scores led to more changes of treatment and referrals [@Kendrick2024a].
+Given the substantial growth in PROMs recording in general practice since 2016, national studies using patient-level data could re-evaluate the impact of PROMs on patient outcomes in routine care.
 
 ### Strengths and limitations
 
 The main strength of this study is its national scale.
-We analysed national SNOMED CT code usage from most general practices in England.
-The codelists, consisting of multiple validated assessment scales, developed for this study are openly available on OpenCodelists and can be reused in future patient-level work using EHRs.
+The codelists developed for this study are openly available on OpenCodelists and can be reused in future patient-level work using EHRs.
 This study also demonstrates how the *opencodecounts* R package [@Tamborska2025] can be used to study PROMs recording activity in general practice using only publicly available aggregate data, without applying for patient-level data extracts from NHS England.
 
 The main limitation is that this study used aggregate counts of recorded code usage, rather than patient-level data.
 This means we cannot distinguish how often PROMs are used per patient and how this may change over time. However, it is likely that individual PROMs codes on the whole are representative of unique PROMs completion events, for example the same patient completing the PHQ-9 at different appointments.
-In contrast, a depression diagnosis code could be recorded multiple times for each patient, not necessarily representing a new instance of the condition.
+It is also difficult to disentangle broader changes in clinical coding trends from clinical practice trends in recording, especially when there are no financial incentives to record activities.
 Some PROMs-related information may be recorded in free text clinical notes rather than structured codes, so the analysis may undercapture the number of PROMs used.
-We also cannot determine from the data how PROMs codes were added to primary care records.
-For example, whether the codes were imported from patient applications that were completed online, external services such as NHS Talking Therapies, or recorded during primary care consultations.
-The use of generic codes, such as "*Depression screening using questions*", creates uncertainty about which specific PROM was administered, as the same code may represent different measures across recording contexts.
+Before 2019, data was submitted in Read v2 or CTV3 format and was mapped to SNOMED CT, which may affect the comparability of counts across the full study period.
+We also cannot determine how PROMs codes were added to primary care records.
+For example, whether the codes were imported from patient applications that were completed online, external services such as NHS TT, or recorded during primary care consultations.
+We also cannot tell whether short measures were used alone or recorded alongside a full measure.
+The use of generic codes, such as "*Depression screening using questions*", creates uncertainty about which specific PROM was administered.
 
 ### Implications for research and practice
+
 The increase in "*PHQ-9 score*" and "*GAD-7 score*" recording means that general practice now increasingly records the same measures used as outcomes in NHS TT.
 Patient-level linkage of primary care and NHS TT records would allow symptom severity to be analysed across both settings.
-The codelists developed in this study identify PROMs recording in primary care records and provide the groundwork for these analyses.
+The codelists developed in this study identify PROMs recording in primary care records and can be used for these analyses.
 
 NHS England also publishes aggregated PROMs outcomes from NHS TT, where the PHQ-9, GAD-7, and Work and Social Adjustment Scale [WSAS, @Mundt2002] are collected as standard measures at every treatment session [@NationalCollaboratingCentreForMentalHealth2024].
 These measures are recorded for 98% of patients who received treatment with a score recorded at the start and end of treatment.
 The published outcomes are broken down by therapy type and main mental health problem [@Clark2018a].
 In psychological therapy services there is good evidence that routine outcome monitoring improves patient outcomes [@Kendrick2020; @Delgadillo2021].
 The *nhstt* R package [@Wiedemann2026] provides access to this data in an analysis-ready format and could be used to describe how symptom severity at the start and end of treatment has changed over time and varies across services.
-
 
 ### Conclusion
 
@@ -997,7 +960,7 @@ Publicly available aggregate data can be used to describe this activity and info
 This project is funded by the Wellcome Trust (317455/Z/24/Z).
 The views expressed are those of the authors and not necessarily those of the Wellcome Trust.
 **YB** is funded by the Bennett Foundation.
-GRT is supported by the Medical Research Council (MR/Z504087/1).
+**GRT** is supported by the Medical Research Council (MR/Z504087/1).
 
 ## Acknowledgements
 
@@ -1006,9 +969,7 @@ We thank Health Data Research UK (HDR UK) for coordinating the Health Data Scien
 ## Conflicts of interests
 
 **SB** has received research funding from the Bennett Foundation, NHS England, the NIHR Oxford Biomedical Research Centre, the Wellcome Trust, XTX Markets, Health Data Research UK; he also receives personal income from consulting on digital healthcare with Respiratory Matters Ltd, and Madalena Consulting LLC.
-
 **BG** has received research funding from the Bennett Foundation, the Laura and John Arnold Foundation, the NHS National Institute for Health Research (NIHR), the NIHR School of Primary Care Research, NHS England, the NIHR Oxford Biomedical Research Centre, the Mohn-Westlake Foundation, NIHR Applied Research Collaboration Oxford and Thames Valley, the Wellcome Trust, the Good Thinking Foundation, Health Data Research UK, the Health Foundation, the World Health Organisation, UKRI MRC, Asthma UK, the British Lung Foundation, and the Longitudinal Health and Wellbeing strand of the National Core Studies programme; he has previously been a Non-Executive Director at NHS Digital; he also receives personal income from speaking and writing for lay audiences on the misuse of science.
-
 **RS** has received research funding from the National Institute for Health and Care Research (NIHR), The Royal College of Psychiatrists, NHS England, The Medical Research Council and the Economic and Social Research Council.
 
 ## References
@@ -1018,21 +979,21 @@ We thank Health Data Research UK (HDR UK) for coordinating the Health Data Scien
 
 ## Supplementary material
 
-::: {#tbls-nhs-reference-sets}
+::: {#tbls-anx-dep-nhs-refsets}
 
 ```{r}
-#| label: make-tab-nhs-reference-sets
+#| label: make-tab-anx-dep-nhs-refsets
 #| echo: false
 #| message: false
 #| warning: false
 
-nhs_reference_sets <- tribble(
+df_tab_anx_dep_nhs_refsets <- tribble(
   ~codelist_name, ~opencodelists_id,
   "Anxiety screening", "[nhsd-primary-care-domain-refsets/anxscrn_cod/20260630/](https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/anxscrn_cod/20260630/)",
   "Depression screening", "[nhsd-primary-care-domain-refsets/depscrn_cod/20260630/](https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/depscrn_cod/20260630/)"
 )
 
-tab_nhs_reference_sets <- nhs_reference_sets |>
+tab_anx_dep_nhs_refsets <- df_tab_anx_dep_nhs_refsets |>
   gt() |>
   cols_label(
     codelist_name = "Codelist name",
@@ -1048,17 +1009,18 @@ tab_nhs_reference_sets <- nhs_reference_sets |>
   style_manuscript_table()
 
 gtsave(
-  tab_nhs_reference_sets,
-  here("output", "tables", "tab-nhs-reference-sets.png")
+  tab_anx_dep_nhs_refsets,
+  here("output", "tables", "tab-anx-dep-nhs-refsets.png")
 )
 
-if (knitr::is_html_output() | knitr::is_latex_output()) {
-  tab_nhs_reference_sets
+# gt's LaTeX table cannot sit inside the custom tbls float, so PDF uses the PNG
+if (knitr::is_html_output()) {
+  tab_anx_dep_nhs_refsets
 } else {
   knitr::include_graphics(here(
     "output",
     "tables",
-    "tab-nhs-reference-sets.png"
+    "tab-anx-dep-nhs-refsets.png"
   ))
 }
 ```
@@ -1066,23 +1028,23 @@ if (knitr::is_html_output() | knitr::is_latex_output()) {
 NHS England reference sets used to inform development of the anxiety disorder and depression PROMs codelists
 :::
 
-::: {#tbls-study-codelists}
+::: {#tbls-anx-dep-study-codelists}
 
 ```{r}
-#| label: make-tab-study-codelists
+#| label: make-tab-anx-dep-study-codelists
 #| echo: false
 #| message: false
 #| warning: false
 
-study_codelists <- tribble(
+df_tab_anx_dep_study_codelists <- tribble(
   ~condition, ~codelist_name, ~opencodelists_id,
-  "Anxiety Disorders", "PROMs activity", "[user/Lola_O/proms-anx/0314a9a9/](https://www.opencodelists.org/codelist/user/Lola_O/proms-anx/0314a9a9/)",
+  "Anxiety Disorders", "PROMs activity", "[user/Lola_O/proms-anx/1ed7683b/](https://www.opencodelists.org/codelist/user/Lola_O/proms-anx/1ed7683b/)",
   "Anxiety Disorders", "PROMs declined", "[user/Lola_O/proms-anx-declined/631bb866/](https://www.opencodelists.org/codelist/user/Lola_O/proms-anx-declined/631bb866/)",
-  "Depression", "PROMs activity", "[user/Lola_O/proms-dep/62e34278/](https://www.opencodelists.org/codelist/user/Lola_O/proms-dep/62e34278/)",
+  "Depression", "PROMs activity", "[user/Lola_O/proms-dep/05c7f506/](https://www.opencodelists.org/codelist/user/Lola_O/proms-dep/05c7f506/)",
   "Depression", "PROMs declined", "[user/Lola_O/proms-dep-declined/4a0c4531/](https://www.opencodelists.org/codelist/user/Lola_O/proms-dep-declined/4a0c4531/)"
 )
 
-tab_study_codelists <- study_codelists |>
+tab_anx_dep_study_codelists <- df_tab_anx_dep_study_codelists |>
   group_by(condition) |>
   gt() |>
   cols_label(
@@ -1098,28 +1060,29 @@ tab_study_codelists <- study_codelists |>
   tab_source_note(
     source_note = md(paste0(
       "*Notes.* Codelist IDs link directly to the corresponding codelist on OpenCodelists. The activity codelists share ",
-      n_shared_codes,
+      txt_anx_dep_n_shared_codes,
       " codes, such as the Hospital Anxiety and Depression Scale, but these account for only ",
-      pct_shared_anx,
+      txt_anx_shared_overall_pct,
       " of anxiety disorder and ",
-      pct_shared_dep,
+      txt_dep_shared_overall_pct,
       " of depression recorded events."
     ))
   ) |>
   style_manuscript_table()
 
 gtsave(
-  tab_study_codelists,
-  here("output", "tables", "tab-study-codelists.png")
+  tab_anx_dep_study_codelists,
+  here("output", "tables", "tab-anx-dep-study-codelists.png")
 )
 
-if (knitr::is_html_output() | knitr::is_latex_output()) {
-  tab_study_codelists
+# gt's LaTeX table cannot sit inside the custom tbls float, so PDF uses the PNG
+if (knitr::is_html_output()) {
+  tab_anx_dep_study_codelists
 } else {
   knitr::include_graphics(here(
     "output",
     "tables",
-    "tab-study-codelists.png"
+    "tab-anx-dep-study-codelists.png"
   ))
 }
 ```
@@ -1127,30 +1090,25 @@ if (knitr::is_html_output() | knitr::is_latex_output()) {
 PROMs activity and declined codelists for anxiety disorders and depression developed in this study
 :::
 
-::: {#figa-proms-ehr-anx-dep-declined}
+::: {#figs-anx-dep-declined}
 
 ```{r}
-#| label: make-fig-proms-ehr-anx-dep-declined
+#| label: make-fig-anx-dep-declined
 #| echo: false
 #| fig-height: 4
 #| fig-width: 8
 #| warning: false
 
-fig_proms_ehr_anx_dep_declined <- df_fig_proms_ehr_anx_dep_declined |>
-  mutate(
-    codelist = factor(
-      codelist,
-      levels = proms_ehr_declined_codelist_levels,
-      labels = codelist_labels_ehr
-    )
-  ) |>
+fig_anx_dep_declined <- df_anx_dep_usage |>
+  filter(type == "declined") |>
   plot_usage_trend(
     x = end_date,
     y = usage,
-    group = codelist,
+    group = condition_label,
     panel_label = "PROMs coded as declined",
-    x_breaks = x_breaks_ehr
+    x_breaks = x_breaks
   ) +
+  scale_colour_viridis_d(end = .6) +
   theme(legend.position = "bottom") +
   guides(
     colour = guide_legend(nrow = 1, byrow = TRUE),
@@ -1161,16 +1119,16 @@ ggsave(
   filename = here(
     "output",
     "figures",
-    "fig-proms-ehr-anx-dep-declined.png"
+    "fig-anx-dep-declined.png"
   ),
-  fig_proms_ehr_anx_dep_declined,
+  fig_anx_dep_declined,
   height = 4,
   width = 8
 )
 
-fig_proms_ehr_anx_dep_declined
+fig_anx_dep_declined
 ```
 
-Yearly recorded events for declined PROMs codes for anxiety disorders and depression in English general practice from `r format(START_DATE_EHR, "%B %Y")` to `r format(END_DATE_EHR, "%B %Y")`.
+Yearly recorded events for declined PROMs codes for anxiety disorders and depression in English general practice from `r format(START_DATE, "%B %Y")` to `r format(END_DATE, "%B %Y")`.
 
 :::
