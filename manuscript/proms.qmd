@@ -286,7 +286,7 @@ The nationally representative Adult Psychiatric Morbidity Survey found that the 
 Recorded anxiety disorder diagnoses and symptoms in primary care have similarly increased [@Archer2022; @Slee2021].
 Primary care is the main point of contact for people with anxiety disorders and depression in England [@Morris2025].
 Psychological (talking) therapies are recommended for these conditions, with most therapy in England provided by NHS Talking Therapies (NHS TT) for anxiety and depression, which treated over 674,000 adults in 2025-26 [@Clark2018a; @NHSEngland2026].
-In both settings, structured assessment of symptom severity is central to guiding clinical decisions, including identifying appropriate treatment and monitoring progress [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022].
+In both settings, structured assessment of symptom severity guides clinical decisions, including identifying appropriate treatment and monitoring progress [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022].
 
 Patient-reported outcome measures (PROMs) are self-completed questionnaires that assess symptom severity and daily functioning in physical and mental health conditions.
 They are used across primary, secondary, and community-based care [@Kendir2025].
@@ -882,24 +882,24 @@ This is consistent with assessment patterns observed under QOF, where the PHQ-9 
 The high use of PHQ-9 and GAD-7 may also reflect their role as standard outcome measures in NHS TT [@NationalCollaboratingCentreForMentalHealth2024].
 Although disorder-specific measures are recommended for conditions such as posttraumatic stress disorder [@NationalCollaboratingCentreForMentalHealth2024], these instruments were rarely recorded in general practice.
 
-Depression PROMs coding was consistently highest across the study period, potentially reflecting the historical financial incentivisation [@Kendrick2009; @Kendrick2020].
+Depression PROMs coding was consistently highest across the study period, potentially reflecting the earlier financial incentives [@Kendrick2009; @Kendrick2020].
 The early decline in depression coding we observed coincided with the removal of the incentive in 2013 [@Kendrick2009; @Kendrick2020].
 NICE guidance continued to recommend the use of routine outcome monitoring [@NationalInstituteForHealthAndCareExcellence2022], which may partly explain the persistence of PHQ-9 recording.
 PHQ-9 score recording recovered to levels above those observed under QOF incentivisation.
-Possible explanations might include psychological services placing greater value on symptom scores for referred patients, or evolving clinical practices around the use of symptom questionnaires in primary care.
+Possible explanations include psychological services placing greater value on symptom scores for referred patients, or changes in how symptom questionnaires are used in primary care.
 For example, recorded remote consultations in English general practice more than tripled during the COVID-19 pandemic [@Aminu2025].
 Patient communication platforms enable patients to complete PROMs remotely, with scores written into the patient's EHR, including PHQ-9 and GAD-7 scores [@Davies2026].
 
-The increased coding of PROMs for anxiety disorders from 2011, particularly GAD-2 and GAD-7, is consistent with NICE recommendations to consider the GAD-2 for identification and use short questionnaires to monitor outcomes [@NationalInstituteForHealthAndCareExcellence2020].
+The increased coding of PROMs for anxiety disorders from 2011, particularly GAD-2 and GAD-7, is consistent with NICE recommendations to consider the GAD-2 and to monitor outcomes with short questionnaires [@NationalInstituteForHealthAndCareExcellence2020].
 The rise in anxiety disorder PROMs coding parallels broader increases in recorded anxiety diagnoses and symptoms in UK primary care from around 2011 [@Archer2022; @Slee2021].
 In addition, the estimated prevalence in England was higher for generalised anxiety disorder compared to depressive episodes in 2023/24 [@Morris2025].
 Nevertheless, anxiety disorder PROMs coding remained lower than depression PROMs coding.
 The discrepancy may reflect differences in the clinical pathways and incentives surrounding the assessment and monitoring of anxiety disorders and depression in primary care.
 
 A further pattern was a shift away from broader procedure codes towards named PROMs score codes, which better indicate what was assessed and may improve interpretability.
-NICE recommends the Whooley screening in yes/no form, but PHQ-2 codes, almost always scores, were recorded about `r txt_dep_phq2_whooley_ratio_last_rounded` times as often as Whooley codes in `r format(END_DATE, "%B %Y")`.
+NICE recommends the Whooley screening in yes/no form, but PHQ-2 scores were recorded about `r txt_dep_phq2_whooley_ratio_last_rounded` times as often as Whooley codes in `r format(END_DATE, "%B %Y")`.
 <!-- TODO Milan: decide how to word this. Whooley screening may have been done and recorded under a generic code such as "Depression screening using questions", so we do not know how often it was used. That code cannot record a yes/no answer. -->
-Short measures are designed as a first step and not to monitor severity [@Kroenke2003], so their rise does not by itself indicate better outcome monitoring.
+Short measures are designed as a first step and not to monitor severity [@Kroenke2003], so their rise may not reflect better outcome monitoring.
 In 2016, a Cochrane review found insufficient evidence that routine PROMs monitoring improves outcomes in common mental health disorders, with only two of 17 studies conducted in primary care [@Kendrick2016].
 Since then, a cluster randomised trial in English and Welsh general practices found no significant effect of PHQ-9 monitoring on depression symptom outcomes, although patients' quality of life improved and in a post-hoc per-protocol analysis, recording of follow-up PHQ-9 scores led to more changes of treatment and referrals [@Kendrick2024a].
 Given the substantial growth in PROMs recording in general practice since 2016, national studies using patient-level data could re-evaluate the impact of PROMs on patient outcomes in routine care.
@@ -924,7 +924,7 @@ The use of generic codes, such as "*Depression screening using questions*", crea
 
 The increase in "*PHQ-9 score*" and "*GAD-7 score*" recording means that general practice now increasingly records the same measures used as outcomes in NHS TT.
 Patient-level linkage of primary care and NHS TT records would allow symptom severity to be analysed across both settings.
-The codelists developed in this study identify PROMs recording in primary care records and provide the groundwork for these analyses.
+The codelists developed in this study identify PROMs recording in primary care records and can be used for these analyses.
 
 NHS England also publishes aggregated PROMs outcomes from NHS TT, where the PHQ-9, GAD-7, and Work and Social Adjustment Scale [WSAS, @Mundt2002] are collected as standard measures at every treatment session [@NationalCollaboratingCentreForMentalHealth2024].
 These measures are recorded for 98% of patients who received treatment with a score recorded at the start and end of treatment.
