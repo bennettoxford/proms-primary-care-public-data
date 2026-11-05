@@ -891,7 +891,7 @@ For example, recorded remote consultations in English general practice more than
 Patient communication platforms enable patients to complete PROMs remotely, with scores written into the patient's EHR, including PHQ-9 and GAD-7 scores [@Davies2026].
 
 The increased coding of PROMs for anxiety disorders from 2011, particularly GAD-2 and GAD-7, is consistent with NICE recommendations to consider the GAD-2 and to monitor outcomes with short questionnaires [@NationalInstituteForHealthAndCareExcellence2020].
-The rise in anxiety disorder PROMs coding parallels broader increases in recorded anxiety diagnoses and symptoms in UK primary care from around 2011 [@Archer2022; @Slee2021].
+The increase in anxiety disorder PROMs coding parallels broader increases in recorded anxiety diagnoses and symptoms in UK primary care from around 2011 [@Archer2022; @Slee2021].
 In addition, the estimated prevalence in England was higher for generalised anxiety disorder compared to depressive episodes in 2023/24 [@Morris2025].
 Nevertheless, anxiety disorder PROMs coding remained lower than depression PROMs coding.
 The discrepancy may reflect differences in the clinical pathways and incentives surrounding the assessment and monitoring of anxiety disorders and depression in primary care.
@@ -899,7 +899,7 @@ The discrepancy may reflect differences in the clinical pathways and incentives 
 A further pattern was a shift away from broader procedure codes towards named PROMs score codes, which better indicate what was assessed and may improve interpretability.
 NICE recommends the Whooley screening in yes/no form, but PHQ-2 scores were recorded about `r txt_dep_phq2_whooley_ratio_last_rounded` times as often as Whooley codes in `r format(END_DATE, "%B %Y")`.
 <!-- TODO Milan: decide how to word this. Whooley screening may have been done and recorded under a generic code such as "Depression screening using questions", so we do not know how often it was used. That code cannot record a yes/no answer. -->
-Short measures are designed as a first step and not to monitor severity [@Kroenke2003], so their rise may not reflect better outcome monitoring.
+Short measures are designed as a first step and not to monitor severity [@Kroenke2003], so their increase may not reflect better outcome monitoring.
 In 2016, a Cochrane review found insufficient evidence that routine PROMs monitoring improves outcomes in common mental health disorders, with only two of 17 studies conducted in primary care [@Kendrick2016].
 Since then, a cluster randomised trial in English and Welsh general practices found no significant effect of PHQ-9 monitoring on depression symptom outcomes, although patients' quality of life improved and in a post-hoc per-protocol analysis, recording of follow-up PHQ-9 scores led to more changes of treatment and referrals [@Kendrick2024a].
 Given the substantial growth in PROMs recording in general practice since 2016, national studies using patient-level data could re-evaluate the impact of PROMs on patient outcomes in routine care.
