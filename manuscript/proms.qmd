@@ -446,7 +446,7 @@ tab_anx_dep_top <- df_tab_anx_dep_top |>
   fmt_percent(columns = share_usage, decimals = 1) |>
   tab_source_note(
     source_note = md(
-      "*Notes*. GAD = Generalised Anxiety Disorder; HADS = Hospital Anxiety and Depression Scale; PHQ = Patient Health Questionnaire; EPDS = Edinburgh Postnatal Depression Scale. EQ-5D-5L = EuroQol five dimension five level. Percentage usage of PROMs is calculated separately for anxiety disorders and depression, using all recorded events for that condition as the denominator."
+      "*Notes*. GAD = Generalised Anxiety Disorder; HADS = Hospital Anxiety and Depression Scale; PHQ = Patient Health Questionnaire; EPDS = Edinburgh Postnatal Depression Scale; EQ-5D-5L = EuroQol five dimension five level. Percentage usage of PROMs is calculated separately for anxiety disorders and depression, using all recorded events for that condition as the denominator."
     )
   ) |>
   style_manuscript_table()
