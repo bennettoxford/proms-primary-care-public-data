@@ -327,7 +327,7 @@ Each yearly data point is labelled by its end date (e.g., "July 2024" covers the
 #| label: methods-codelist-development
 anx_dep_shared_codes <- intersect(df_anx_proms_cod$code, df_dep_proms_cod$code)
 txt_anx_dep_n_shared_codes <- length(anx_dep_shared_codes)
-txt_anx_n_codes <- n_distinct(df_anx_proms_cod$term)
+txt_anx_n_codes <- n_distinct(df_anx_proms_cod$code)
 txt_anx_n_declined_codes <- n_distinct(df_anx_proms_declined_cod$code)
 txt_dep_n_codes <- n_distinct(df_dep_proms_cod$code)
 txt_dep_n_declined_codes <- n_distinct(df_dep_proms_declined_cod$code)
