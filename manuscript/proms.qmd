@@ -773,11 +773,13 @@ df_fig_anx_top <- df_anx_dep_usage |>
   ) |>
   mutate(
     description_short = recode(description_short, !!!dict_snomed_description),
-    codelist = fct_reorder(
+    codelist = factor(
       paste0(description_short, " (", str_to_sentence(semantic_tag), ")"),
-      usage,
-      .fun = sum,
-      .desc = TRUE
+      levels = c(
+        "GAD-2 score (Observable entity)",
+        "GAD-7 score (Observable entity)",
+        "HADS anxiety score (Observable entity)"
+      )
     )
   )
 
@@ -789,11 +791,13 @@ df_fig_dep_top <- df_anx_dep_usage |>
   ) |>
   mutate(
     description_short = recode(description_short, !!!dict_snomed_description),
-    codelist = fct_reorder(
+    codelist = factor(
       paste0(description_short, " (", str_to_sentence(semantic_tag), ")"),
-      usage,
-      .fun = sum,
-      .desc = TRUE
+      levels = c(
+        "PHQ-2 score (Observable entity)",
+        "PHQ-9 score (Observable entity)",
+        "Depression screening using questions (Procedure)"
+      )
     )
   )
 
