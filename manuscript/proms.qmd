@@ -742,7 +742,7 @@ txt_dep_phq2_whooley_ratio_last_rounded <- round(
 ```{r}
 #| label: fig-anx-dep-top-trends
 #| echo: false
-#| fig-cap: !expr paste0("Yearly recorded events for the ", N_TOP_CODES_FIG, " most frequently recorded PROMs activity codes for anxiety disorders and depression in English general practice from ", format(START_DATE, "%B %Y"), " to ", format(END_DATE, "%B %Y"), ".")
+#| fig-cap: !expr paste0("Yearly recorded events for the ", N_TOP_CODES_FIG, " most frequently recorded PROMs activity codes for anxiety disorders and depression in English general practice from ", format(START_DATE, "%B %Y"), " to ", format(END_DATE, "%B %Y"), ". Circles show brief screening questionnaires (GAD-2 and PHQ-2). Triangles show long-form questionnaires (PHQ-9, GAD-7, and the HADS anxiety subscale). Squares show procedure codes, which do not identify the questionnaire used.")
 #| fig-height: 8
 #| fig-width: 8
 #| warning: false
@@ -833,10 +833,21 @@ fig_dep_top <- df_fig_dep_top |>
 
 y_max_top_trends <- max(fig_anx_top$data$.usage, fig_dep_top$data$.usage)
 
+# Circle for short screenings, triangle for long forms, square for procedures
+shapes_questionnaire_type <- c(
+  "GAD-2 score (Observable entity)" = 16,
+  "GAD-7 score (Observable entity)" = 17,
+  "HADS anxiety score (Observable entity)" = 17,
+  "PHQ-2 score (Observable entity)" = 16,
+  "PHQ-9 score (Observable entity)" = 17,
+  "Depression screening using questions (Procedure)" = 15
+)
+
 fig_anx_dep_top_trends <- (fig_anx_top /
   fig_dep_top) +
   plot_layout(axis_titles = "collect") +
   plot_annotation(tag_levels = list(c("A", "B"))) &
+  scale_shape_manual(values = shapes_questionnaire_type) &
   coord_cartesian(ylim = c(0, y_max_top_trends)) &
   theme(plot.tag = element_text(margin = margin(r = 8)))
 
