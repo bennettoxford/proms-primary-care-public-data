@@ -299,8 +299,8 @@ How these recommendations translate into routine practice is less clear.
 
 Systematic use of PROMs at initial assessment and follow-up can improve patient outcomes, particularly in psychological therapy settings [@Clark2018a; @Kendrick2016; @Kendrick2020; @Kendrick2024a; @Gelkopf2022].
 In primary care, the Quality and Outcomes Framework (QOF) financially incentivised general practitioners to record structured severity assessments for depression at diagnosis from 2006 and at follow-up from 2009, until these indicators were retired in 2013 [@Kendrick2009; @Kendrick2020].
-However, evidence in the impact of PROMs use on patient outcomes in primary care remains limited.
-However, further research on patient outcomes first requires identifying how PROMs are recorded in primary care electronic health records (EHR), including which measures are used and how often [@Matthewman2024].
+However, evidence on the impact of PROMs use on patient outcomes in primary care remains limited.
+Further research on patient outcomes first requires identifying how PROMs are recorded in primary care electronic health records (EHR), including which measures are used and how often [@Matthewman2024].
 
 We set out to describe PROMs recording and use for anxiety disorders and depression in English general practice using publicly available aggregated data from NHS England [@Tamborska2025].
 This study aims
@@ -339,12 +339,12 @@ txt_dep_shared_overall_pct <- usage_share(df_dep_events, snomed_code %in% anx_de
 ```
 
 Codelists were created following guidance on codelist development [@Matthewman2024].
-We identified search terms and specific SNOMED CT codes from NICE guidelines [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022], the NHS TT manual [@NationalCollaboratingCentreForMentalHealth2024], and the [NHS Primary Care Domain Reference Set](https://digital.nhs.uk/data-and-information/data-collections-and-data-sets/data-collections/quality-and-outcomes-framework-qof/quality-and-outcome-framework-qof-business-rules/primary-care-domain-reference-set-portal) (Supplementary @tbls-anx-dep-nhs-refsets).
+We identified search terms and specific SNOMED CT codes from NICE guidelines [@NationalInstituteForHealthAndCareExcellence2013; @NationalInstituteForHealthAndCareExcellence2018; @NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022], the NHS TT manual [@NationalCollaboratingCentreForMentalHealth2024], and the [NHS Primary Care Domain Reference Set](https://digital.nhs.uk/data-and-information/data-collections-and-data-sets/data-collections/quality-and-outcomes-framework-qof/quality-and-outcome-framework-qof-business-rules/primary-care-domain-reference-set-portal) (Supplementary @tbls-anx-dep-nhs-refsets).
 We also consulted a general practitioner to identify additional clinically relevant search terms.
 For each condition, two codelists were developed: one capturing PROMs activity codes indicating completed assessments and recorded scores, and one capturing declined assessments.
 All four codelists developed in this study are published on OpenCodelists and available for reuse (Supplementary @tbls-anx-dep-study-codelists).
 
-**PROMs for anxiety disorders.** The activity codelist included `r txt_anx_n_codes` SNOMED CT codes, including the GAD-7 and GAD-2 [@Spitzer2006], HADS-A [@Zigmond1983], and anxiety disorder-specific measures for posttraumatic stress disorder (PCL-5), health anxiety (SHAI), social anxiety disorder (SPIN), obsessive-compulsive disorder (OCI), panic disorder (PDSS), and agoraphobia (Mobility Inventory) [@NationalCollaboratingCentreForMentalHealth2024], as well as broader anxiety screening concepts.
+**PROMs for anxiety disorders.** The activity codelist included `r txt_anx_n_codes` SNOMED CT codes, including the GAD-7 [@Spitzer2006], GAD-2 [@Kroenke2007], the anxiety subscale of the HADS [HADS-A, @Zigmond1983], and anxiety disorder-specific measures, such as the PTSD Checklist for DSM-5 [PCL-5, @Weathers2013] and Social Phobia Inventory [SPIN, @Connor2000].
 The declined assessments codelist included `r txt_anx_n_declined_codes` codes indicating that an assessment was offered but not completed.
 
 **PROMs for depression.** The activity codelist included `r txt_dep_n_codes` SNOMED CT codes, including the PHQ-9 [@Kroenke2001], PHQ-2 [@Kroenke2003], BDI-II [@Beck1996], and HADS-D [@Zigmond1983], as well as broader depression screening concepts.
@@ -871,9 +871,11 @@ Consistent with previous research on depression severity assessments [@Kendrick2
 PHQ-9 and GAD-7 were the most recorded named measures in recent years, consistent with NICE recommendations [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022].
 Their frequent recording may also reflect their role as standard outcome measures in NHS TT [@NationalCollaboratingCentreForMentalHealth2024].
 The high usage of generic depression screening codes is also consistent with reported variation in PROMs recording across general practice [@Turner2020].
-Although anxiety disorder-specific measures are recommended for conditions such as posttraumatic stress disorder [@NationalCollaboratingCentreForMentalHealth2024], and social anxiety disorder [@NationalInstituteForHealthAndCareExcellence2013] these instruments were rarely recorded in general practice.
-Recording of the brief measures PHQ-2 and GAD-2 also increased alongside their longer versions.
-However, these are primarily used for screening [@NationalInstituteForHealthAndCareExcellence2020; @Kroenke2003], so their increase may not reflect more frequent outcome monitoring.
+Although NICE recommends anxiety disorder-specific measures for conditions such as social anxiety disorder [@NationalInstituteForHealthAndCareExcellence2013], these instruments were rarely recorded in general practice.
+NICE also recommends the 3-item mini-SPIN [@Connor2001] to identify possible cases [@NationalInstituteForHealthAndCareExcellence2013].
+We could not identify a SNOMED CT code for the mini-SPIN, so its use cannot be recorded in a structured form.
+In contrast, the brief PHQ-2 and GAD-2 have their own codes, and their recording increased alongside their longer versions.
+However, these are primarily used for screening [@NationalInstituteForHealthAndCareExcellence2020; @Kroenke2003; @Kroenke2007], so their increase may not reflect more frequent outcome monitoring.
 
 Depression PROMs coding was consistently higher than anxiety disorder PROMs coding across the study period, despite anxiety disorders being at least as common in the community [@Morris2025].
 This potentially reflects the earlier financial incentives to use depression PROMs under QOF [@Kendrick2020; @Kendrick2009].
