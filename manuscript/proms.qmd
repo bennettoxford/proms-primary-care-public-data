@@ -228,7 +228,6 @@ df_anx_events <- filter(df_anx_dep_events, condition == "anx")
 df_dep_events <- filter(df_anx_dep_events, condition == "dep")
 ```
 
-
 ## Abstract
 
 ```{r}
@@ -377,8 +376,8 @@ txt_dep_top_overall_pct <- usage_top_share(df_dep_events, N_TOP_CODES_TAB)
 
 MAIN_SEMANTIC_TAGS <- c("observable entity", "procedure")
 
-df_anx_events_last <- filter(df_anx_events, year == year(END_DATE))
-df_dep_events_last <- filter(df_dep_events, year == year(END_DATE))
+df_anx_events_last <- filter(df_anx_events, type == "activity", year == year(END_DATE))
+df_dep_events_last <- filter(df_dep_events, type == "activity", year == year(END_DATE))
 
 txt_anx_score_last_pct <- usage_share(df_anx_events_last, semantic_tag == "observable entity")
 txt_dep_score_last_pct <- usage_share(df_dep_events_last, semantic_tag == "observable entity")
@@ -392,7 +391,7 @@ For both condition groups, almost all recording instances were captured by the `
 
 In `r format(END_DATE, "%B %Y")`, anxiety disorder PROMs recording was predominantly represented by observable entity concepts (`r txt_anx_score_last_pct`), such as "*GAD-7 score*" and "*GAD-2 score*".
 Depression PROMs recording was also mainly represented by observable entity concepts (`r txt_dep_score_last_pct`), with fewer procedure concepts (`r txt_dep_proc_last_pct`), such as "*PHQ-9 score*" and "*Depression screening using questions*".
-Situation, finding, and assessment scale semantic tag concepts accounted for `r txt_anx_other_last_pct` of anxiety disorder and `r txt_dep_other_last_pct` of depression recorded events.
+Assessment scale and finding semantic tag concepts accounted for `r txt_anx_other_last_pct` of anxiety disorder and `r txt_dep_other_last_pct` of depression recorded events.
 
 
 ```{r}
