@@ -250,21 +250,22 @@ txt_dep_anx_ratio_last_rounded <- round(
 ```
 
 **Background:**
-Patient-reported outcome measures (PROMs) are widely used to assess symptom severity, guide treatment, and inform service improvement for anxiety disorders and depression in mental health settings.
-However, PROMs use is not systematic in primary care, where most individuals with these conditions first present.
+Patient-reported outcome measures (PROMs) are widely used to assess symptom severity, guide treatment, and inform service improvement for anxiety disorders and depression.
+However, PROMs use is not systematic in primary care, where most individuals first present with these conditions.
 **Aim:**
-To describe PROMs recording and use from `r format(START_DATE, "%B %Y")` to `r format(END_DATE, "%B %Y")` for anxiety disorders and depression in primary care electronic health records in England.
+To describe PROMs recording from `r format(START_DATE, "%B %Y")` to `r format(END_DATE, "%B %Y")` for anxiety disorders and depression in primary care electronic health records in England.
 **Design and setting:**
 Retrospective descriptive analysis of publicly available national SNOMED CT code usage data from most general practices in England through OpenCodeCounts.
 **Method:**
 We developed PROMs activity and declined-assessment codelists for anxiety disorders and depression, described code usage, and plotted annual trends.
 **Results:**
 Over the past 5 years, GAD-7 and PHQ-9 were the most frequently recorded PROMs for anxiety disorders and depression, respectively.
-Recording shifted from PROMs procedure codes, which do not record assessment scores, towards PROMs codes that record these measure scores.
-Over the entire study period, depression-related PROMs codes were recorded around `r txt_dep_anx_ratio_overall_rounded` times as often as anxiety disorder-related codes (`r txt_dep_overall` vs `r txt_anx_overall`), decreasing to `r txt_dep_anx_ratio_last_rounded` times in `r format(END_DATE, "%B %Y")` (`r txt_dep_last` vs `r txt_anx_last`).
-PHQ-9 score usage dropped by half after 2013, following the cessation of financial incentives to record them. This fall was recovered completely by `r year(END_DATE)`.
+Recording of brief screening questionnaires, including PHQ-2 and GAD-2, also increased alongside their longer versions since 2019.
+Recording shifted from PROMs procedure codes, towards codes that record PROMs scores.
+Depression-related PROMs codes were recorded around `r txt_dep_anx_ratio_overall_rounded` times as often as anxiety disorder-related codes (`r txt_dep_overall` vs `r txt_anx_overall`) across the study period, decreasing to `r txt_dep_anx_ratio_last_rounded` times in `r format(END_DATE, "%B %Y")` (`r txt_dep_last` vs `r txt_anx_last`).
+PHQ-9 score usage dropped by half after financial incentives ended in 2013, recovering completely by `r year(END_DATE)`.
 **Conclusion:**
-Publicly available aggregate data can be used to describe PROMs recording over time, explore trends, and inform feasibility of research on anxiety disorders and depression in English general practice.
+Publicly available aggregate data can describe PROMs recording trends and inform feasibility of research on anxiety disorders and depression in English general practice.
 
 **Keywords:** patient-reported outcome measures, anxiety disorders, depression, primary care, SNOMED CT, electronic health records
 
@@ -273,7 +274,7 @@ Publicly available aggregate data can be used to describe PROMs recording over t
 The National Institute for Health and Care Excellence (NICE) and the British Medical Association (BMA) recommend the use of patient reported outcome measures (PROMs) for assessing symptom severity in anxiety disorders and depression.
 How often and in what form these measures are recorded in general practice is unclear.
 We used OpenCodeCounts, an openly accessible online tool and R package that shows how often clinical codes are used in England.
-Over the past 5 years, recording shifted towards codes that record the measure scores, specifically PHQ-9 and GAD-7.
+Over the past 5 years, recording shifted from codes that only indicate whether a questionnaire was given, towards codes that record the measure scores, specifically PHQ-9 and GAD-7.
 Additionally, recording of PHQ-9 declined after financial incentives ended in 2013, before increasing again by the end of the study period in `r year(END_DATE)`.
 These findings provide national context on PROMs recording in primary care.
 They also show how publicly available data can inform future patient-level studies.
@@ -281,27 +282,27 @@ They also show how publicly available data can inform future patient-level studi
 ## Introduction
 
 Anxiety disorders and depression are the most common mental health conditions in England.
-The nationally representative Adult Psychiatric Morbidity Survey found that the prevalence of generalised anxiety disorder and depressive episodes among adults aged 16-64 increased between 1993 and 2023/24, reaching 8.5% and 4.4% respectively [@Morris2025].
+The nationally representative Adult Psychiatric Morbidity Survey found that the prevalence among adults aged 16-64 increased between 1993 and 2023/24 from 15.5% to 20.2% [@Morris2025].
 Recorded anxiety disorder diagnoses and symptoms in primary care have similarly increased [@Archer2022; @Slee2021].
 Primary care is the main point of contact for people with anxiety disorders and depression in England [@Morris2025].
-Psychological (talking) therapies are recommended for these conditions, with most therapy in England provided by NHS Talking Therapies (NHS TT) for anxiety and depression, which treated over 674,000 adults in 2025-26 [@Clark2018a; @NHSEngland2026].
+Psychological (talking) therapies are recommended for these conditions, with most such therapy in England provided by NHS Talking Therapies (NHS TT) for anxiety and depression, which treated over 674,000 adults in 2025-26 [@Clark2018a; @NHSEngland2026].
 In both settings, structured assessment of symptom severity guides clinical decisions, including identifying appropriate treatment and monitoring progress [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022].
 
 Patient-reported outcome measures (PROMs) are self-completed questionnaires that assess symptom severity and daily functioning in physical and mental health conditions.
 They are used across primary, secondary, and community-based care [@Kendir2025].
 The National Institute for Health and Care Excellence (NICE) and the British Medical Association (BMA) recommend validated measures to assess severity and guide treatment decisions [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022; @BritishMedicalAssociation2006].
-For depression, the Patient Health Questionnaire-9 [PHQ-9, @Kroenke2001], the Beck Depression Inventory [BDI-II, @Beck1996], and the depression subscale of the Hospital Anxiety and Depression Scale [HADS-D, @Zigmond1983] are used for symptom severity, with the Whooley screening [@Whooley1997] and the 2-item version of the PHQ [PHQ-2, @Kroenke2003] used for screening.
-Both ask the same questions, answered yes/no or on a Likert scale.
+For depression, the Patient Health Questionnaire-9 [PHQ-9, @Kroenke2001], the Beck Depression Inventory [BDI-II, @Beck1996], and the depression subscale of the Hospital Anxiety and Depression Scale [HADS-D, @Zigmond1983] are recommended for symptom severity assessment.
+Brief screening questionnaires for depression include the Whooley screening [@Whooley1997] and the 2-item version of the PHQ [PHQ-2, @Kroenke2003].
+Both these measures ask the same questions, but differ on response options (yes/no vs Likert scale).
 For anxiety disorders, the Generalised Anxiety Disorder 7-item scale [GAD-7, @Spitzer2006] is widely used for symptom severity, with the 2-item version (GAD-2) used for screening [@NationalInstituteForHealthAndCareExcellence2020].
 How these recommendations translate into routine practice is less clear.
 
 Systematic use of PROMs at initial assessment and follow-up can improve patient outcomes, particularly in psychological therapy settings [@Clark2018a; @Kendrick2016; @Kendrick2020; @Kendrick2024a; @Gelkopf2022].
-The Quality and Outcomes Framework (QOF) financially incentivised general practitioners to record structured severity assessments for depression at diagnosis from 2006 and at follow-up from 2009, until these indicators were retired in 2013 [@Kendrick2009; @Kendrick2020].
-However, large scale research is lacking on the impact of PROMs use on patient trajectories in primary care.
-This work first requires reliable codelists that identify PROMs in electronic health records (EHRs) [@Matthewman2024], assessment of recording completeness, including the presence of numeric scores, and distinguishing declined assessments from those never offered.
+In primary care, the Quality and Outcomes Framework (QOF) financially incentivised general practitioners to record structured severity assessments for depression at diagnosis from 2006 and at follow-up from 2009, until these indicators were retired in 2013 [@Kendrick2009; @Kendrick2020].
+However, evidence in the impact of PROMs use on patient outcomes in primary care remains limited.
+However, further research on patient outcomes first requires identifying how PROMs are recorded in primary care electronic health records (EHR), including which measures are used and how often [@Matthewman2024].
 
-We set out to describe PROMs recording and use for anxiety disorders and depression in English general practice.
-NHS England publishes aggregated [primary care code usage](https://digital.nhs.uk/data-and-information/publications/statistical/mi-snomed-code-usage-in-primary-care) data, which includes most general practices in England since `r year(START_DATE)` and is available through the R package *opencodecounts* [@Tamborska2025].
+We set out to describe PROMs recording and use for anxiety disorders and depression in English general practice using publicly available aggregated data from NHS England [@Tamborska2025].
 This study aims
 (1) to develop open codelists for PROMs based on national guidance,
 (2) to describe how often and in what form these measures are recorded over time, and
@@ -338,15 +339,15 @@ txt_dep_shared_overall_pct <- usage_share(df_dep_events, snomed_code %in% anx_de
 ```
 
 Codelists were created following guidance on codelist development [@Matthewman2024].
-We identified search terms and specific SNOMED CT codes from NICE guidelines [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022], the NHS TT manual [@NationalCollaboratingCentreForMentalHealth2024], and the [NHS Primary Care Domain Reference Set](https://digital.nhs.uk/data-and-information/data-collections-and-data-sets/data-collections/quality-and-outcomes-framework-qof/quality-and-outcome-framework-qof-business-rules/primary-care-domain-reference-set-portal) for anxiety and depression screening codes (Supplementary @tbls-anx-dep-nhs-refsets).
+We identified search terms and specific SNOMED CT codes from NICE guidelines [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022], the NHS TT manual [@NationalCollaboratingCentreForMentalHealth2024], and the [NHS Primary Care Domain Reference Set](https://digital.nhs.uk/data-and-information/data-collections-and-data-sets/data-collections/quality-and-outcomes-framework-qof/quality-and-outcome-framework-qof-business-rules/primary-care-domain-reference-set-portal) (Supplementary @tbls-anx-dep-nhs-refsets).
 We also consulted a general practitioner to identify additional clinically relevant search terms.
 For each condition, two codelists were developed: one capturing PROMs activity codes indicating completed assessments and recorded scores, and one capturing declined assessments.
 All four codelists developed in this study are published on OpenCodelists and available for reuse (Supplementary @tbls-anx-dep-study-codelists).
 
-**PROMs for anxiety disorders.** The activity codelist included `r txt_anx_n_codes` SNOMED CT codes, including the GAD-7 and GAD-2 [@Spitzer2006], disorder-specific instruments recommended for panic disorder, obsessive-compulsive disorder, and posttraumatic stress disorder [@NationalCollaboratingCentreForMentalHealth2024].
+**PROMs for anxiety disorders.** The activity codelist included `r txt_anx_n_codes` SNOMED CT codes, including the GAD-7 and GAD-2 [@Spitzer2006], HADS-A [@Zigmond1983], and anxiety disorder-specific measures for posttraumatic stress disorder (PCL-5), health anxiety (SHAI), social anxiety disorder (SPIN), obsessive-compulsive disorder (OCI), panic disorder (PDSS), and agoraphobia (Mobility Inventory) [@NationalCollaboratingCentreForMentalHealth2024], as well as broader anxiety screening concepts.
 The declined assessments codelist included `r txt_anx_n_declined_codes` codes indicating that an assessment was offered but not completed.
 
-**PROMs for depression.** The activity codelist included `r txt_dep_n_codes` SNOMED CT codes, including the PHQ-9 [@Kroenke2001], BDI-II [@Beck1996], and HADS-D [@Zigmond1983], as well as postnatal depression measures, and broader depression screening concepts.
+**PROMs for depression.** The activity codelist included `r txt_dep_n_codes` SNOMED CT codes, including the PHQ-9 [@Kroenke2001], PHQ-2 [@Kroenke2003], BDI-II [@Beck1996], and HADS-D [@Zigmond1983], as well as broader depression screening concepts.
 The declined assessments codelist included `r txt_dep_n_declined_codes` codes.
 
 ### Data analyses
@@ -355,13 +356,12 @@ The declined assessments codelist included `r txt_dep_n_declined_codes` codes.
 #| label: methods-data-analyses
 N_TOP_CODES_TAB <- 10
 N_TOP_CODES_FIG <- 3
-txt_anx_dep_n_linked_codes <- length(dict_linked_codes)
+txt_anx_dep_n_linked_codes <- xfun::numbers_to_words(length(dict_linked_codes))
 ```
 
-We combined the usage of `r txt_anx_dep_n_linked_codes` pairs of identical codes as specified in the [SNOMED CT History Substitution Table](https://isd.digital.nhs.uk/trud/users/guest/filters/0/categories/8/items/276/releases) or identified by manual review.
+We combined the usage of `r txt_anx_dep_n_linked_codes` pairs of equivalent codes identified through [SNOMED CT history records](https://isd.digital.nhs.uk/trud/users/guest/filters/0/categories/8/items/276/releases) or manual review.
 We identified the `r N_TOP_CODES_TAB` most frequently recorded codes for the activity and declined codelists for anxiety disorders and depression PROMs.
 We plotted the annual activity broken down by semantic tag including "observable entity", "procedure", and all other tags.
-Observable entity codes were interpreted as recorded numeric PROMs scores and procedure codes as an indicator for broader assessment activity.
 Annual usage counts for the `r N_TOP_CODES_FIG` most frequently recorded activity codes were also plotted.
 All analysis code and clinical codelists are openly available at <https://github.com/bennettoxford/proms-primary-care-public-data>.
 
@@ -386,12 +386,12 @@ txt_anx_other_last_pct <- usage_share(df_anx_events_last, !semantic_tag %in% MAI
 txt_dep_other_last_pct <- usage_share(df_dep_events_last, !semantic_tag %in% MAIN_SEMANTIC_TAGS)
 ```
 
-We identified `r txt_dep_overall` depression-related and `r txt_anx_overall` anxiety disorder-related PROMs recording instances between `r format(START_DATE, "%B %Y")` and `r format(END_DATE, "%B %Y")`.
+We identified `r txt_anx_overall` anxiety disorder-related and `r txt_dep_overall` depression-related PROMs recording instances between `r format(START_DATE, "%B %Y")` and `r format(END_DATE, "%B %Y")`.
 For both condition groups, almost all recording instances were captured by the `r N_TOP_CODES_TAB` most frequently used codes, which represented `r txt_anx_top_overall_pct` and `r txt_dep_top_overall_pct` of recording instances for anxiety disorders and depression respectively (@tbl-anx-dep-top).
 
 In `r format(END_DATE, "%B %Y")`, anxiety disorder PROMs recording was predominantly represented by observable entity concepts (`r txt_anx_score_last_pct`), such as "*GAD-7 score*" and "*GAD-2 score*".
-Depression PROMs recording was also mainly represented by observable entity concepts (`r txt_dep_score_last_pct`), with fewer procedure concepts (`r txt_dep_proc_last_pct`), such as "*PHQ-9 score*" and "*Depression screening using questions*".
-Assessment scale and finding semantic tag concepts accounted for `r txt_anx_other_last_pct` of anxiety disorder and `r txt_dep_other_last_pct` of depression recorded events.
+Depression PROMs recording was also mainly represented by observable entity concepts (`r txt_dep_score_last_pct`), with fewer procedure concepts (`r txt_dep_proc_last_pct`), such as "*Depression screening using questions*".
+Situation, finding, and assessment scale semantic tag concepts accounted for `r txt_anx_other_last_pct` of anxiety disorder and `r txt_dep_other_last_pct` of depression recorded events.
 
 
 ```{r}
@@ -445,7 +445,7 @@ tab_anx_dep_top <- df_tab_anx_dep_top |>
   fmt_percent(columns = share_usage, decimals = 1) |>
   tab_source_note(
     source_note = md(
-      "*Notes*. GAD = Generalised Anxiety Disorder; HADS = Hospital Anxiety and Depression Scale; PHQ = Patient Health Questionnaire; EPDS = Edinburgh Postnatal Depression Scale; EQ-5D-5L = EuroQol five dimension five level. Percentage usage of PROMs is calculated separately for anxiety disorders and depression, using all recorded events for that condition as the denominator."
+      "*Notes*. GAD = Generalised Anxiety Disorder; HADS = Hospital Anxiety and Depression Scale; PHQ = Patient Health Questionnaire; EPDS = Edinburgh Postnatal Depression Scale; EQ-5D-5L = EuroQol five dimension five level. % = Percentage usage for each PROMs code is calculated separately for anxiety disorders and depression, using all recorded events for that condition as the denominator."
     )
   ) |>
   style_manuscript_table()
@@ -538,8 +538,7 @@ In contrast, anxiety disorder PROMs recording remained lower but increased over 
 PROMs for depression were initially most often recorded as procedures, but this declined substantially from `r txt_dep_proc_2012` in July 2012 to `r txt_dep_proc_last` in `r format(END_DATE, "%B %Y")` (@fig-anx-dep-trends, Panel C).
 Depression-related PROMs with scores (observable entity) declined from `r txt_dep_score_2012` in July 2012 to `r txt_dep_score_2016` in July 2016, before increasing again to `r txt_dep_score_last` by `r format(END_DATE, "%B %Y")` (@fig-anx-dep-trends, Panel B).
 Anxiety disorder PROMs were rarely recorded as procedures, with no more than `r txt_anx_proc_max` recorded events in any year, while codes with scores increased from `r txt_anx_score_2012` in July 2012 to `r txt_anx_score_last` in `r format(END_DATE, "%B %Y")` (@fig-anx-dep-trends, Panel B-C).
-Together, these trends show a shift from procedure codes towards observable entity codes recording numeric PROMs scores, most evident for depression.
-Declined PROMs recording increased over the study period but remained low, reaching at most `r txt_dep_declined_max` recorded events in any year for depression and `r txt_anx_declined_max` for anxiety disorders (Supplementary @figs-anx-dep-declined).
+Codes indicating that patients declined recording of PROMs increased over the study period but remained low, reaching at most `r txt_dep_declined_max` recorded events in any year for depression and `r txt_anx_declined_max` for anxiety disorders (Supplementary @figs-anx-dep-declined).
 This represented 1 in `r txt_anx_dep_declined_one_in_last_rounded` recorded PROMs codes by `r format(END_DATE, "%B %Y")`.
 
 ```{r}
@@ -651,11 +650,6 @@ txt_dep_phq9_overtakes_year <- df_dep_events |>
   filter(phq9 > screening) |>
   slice_min(year) |>
   pull(year)
-txt_dep_phq9_2012 <- usage_total(
-  df_dep_events,
-  snomed_code == CODE_DEP_PHQ9,
-  year == 2012
-)
 txt_dep_phq9_last <- usage_total(
   df_dep_events,
   snomed_code == CODE_DEP_PHQ9,
@@ -719,21 +713,6 @@ txt_anx_short_2012_pct <- usage_short_share(df_anx_events, 2012)
 txt_dep_short_2012_pct <- usage_short_share(df_dep_events, 2012)
 txt_anx_short_last_pct <- usage_short_share(df_anx_events, year(END_DATE))
 txt_dep_short_last_pct <- usage_short_share(df_dep_events, year(END_DATE))
-
-txt_dep_phq2_whooley_ratio_last_rounded <- round(
-  usage_total(
-    df_dep_events,
-    snomed_code %in% CODES_PHQ2,
-    year == year(END_DATE),
-    .format_as_str = FALSE
-  ) /
-    usage_total(
-      df_dep_events,
-      snomed_code %in% CODES_WHOOLEY,
-      year == year(END_DATE),
-      .format_as_str = FALSE
-    )
-)
 ```
 
 @fig-anx-dep-top-trends shows yearly trends in recorded events for the `r N_TOP_CODES_FIG` most frequently recorded PROMs SNOMED CT codes.
@@ -867,21 +846,20 @@ ggsave(
 Among the PROMs codes for anxiety disorders, "*GAD-7 score*" was the most frequently recorded code throughout the study period and increased overall from July 2012 to `r format(END_DATE, "%B %Y")` (@fig-anx-dep-top-trends, Panel A).
 "*GAD-2 score*" recording appeared from July 2019 and increased thereafter.
 Both codes showed their most rapid increases from 2023.
-The remaining code ("*HADS anxiety score*") was recorded at lower volumes, with no more than `r txt_anx_hads_max` recorded events per year.
+The remaining code ("*HADS anxiety score*") was recorded less often, with no more than `r txt_anx_hads_max` recorded events per year.
 
 For the two most frequently used depression-related PROMs codes, recording declined between July 2012 and July 2014.
-However "*Depression screening using questions*" continued to decrease to `r txt_dep_screen_last` by `r format(END_DATE, "%B %Y")`, whereas "*PHQ-9 score*" increased again to `r txt_dep_phq9_last`, above its level of `r txt_dep_phq9_2012` in July 2012, the year before the QOF financial incentives for using PROMs were discontinued (@fig-anx-dep-top-trends, Panel B).
-In July `r txt_dep_phq9_overtakes_year`, "*PHQ-9 score*" was recorded more often than "*Depression screening using questions*" for the first time.
-The remaining top depression PROMs code ("*PHQ-2 score*") was first recorded in July `r txt_dep_phq2_first_year` and increased to `r txt_dep_phq2_last` by `r format(END_DATE, "%B %Y")`.
-In July `r txt_dep_phq2_overtakes_year`, it was recorded more often than "*Depression screening using questions*" for the first time.
+However "*Depression screening using questions*" continued to decrease to `r txt_dep_screen_last` by `r format(END_DATE, "%B %Y")`, whereas "*PHQ-9 score*" increased again to `r txt_dep_phq9_last`, above its level in July 2012, the year before the QOF financial incentives for using PROMs were discontinued (@fig-anx-dep-top-trends, Panel B).
+"*Depression screening using questions*" was overtaken for the first time by "*PHQ-9 score*" in July `r txt_dep_phq9_overtakes_year` and by "*PHQ-2 score*" in July `r txt_dep_phq2_overtakes_year`.
+"*PHQ-2 score*" was first recorded in July `r txt_dep_phq2_first_year` and increased to `r txt_dep_phq2_last` by `r format(END_DATE, "%B %Y")`.
 
-Short measures (PHQ-2, GAD-2, 4-item PHQ [PHQ-4] and Whooley screening) made up `r txt_anx_short_last_pct` of anxiety disorder and `r txt_dep_short_last_pct` of depression activity coding in `r format(END_DATE, "%B %Y")`, up from `r txt_anx_short_2012_pct` and `r txt_dep_short_2012_pct` in July 2012.
+Recording of brief screening questionnaires, including PHQ-2 and GAD-2, increased alongside recording of PHQ-9 and GAD-7.
+Brief screening questionnaires (PHQ-2, GAD-2, PHQ-4, and Whooley questions) accounted for `r txt_anx_short_last_pct` of anxiety disorder and `r txt_dep_short_last_pct` of depression activity coding in `r format(END_DATE, "%B %Y")`, up from `r txt_anx_short_2012_pct` and `r txt_dep_short_2012_pct` in July 2012.
 
 ## Discussion
 
 ### Summary
 
-Using publicly available aggregate data, we described coding patterns for PROMs for anxiety disorders and depression in primary care records from `r year(START_DATE)` to `r year(END_DATE)`.
 Over the past 5 years, GAD-7 and PHQ-9 were the most frequently recorded PROMs annually for anxiety disorders and depression respectively.
 While "*Depression screening using questions*" had the highest cumulative recording across the study period, "*PHQ-9 score*" was the most frequently recorded code annually from July `r txt_dep_phq9_overtakes_year` onwards.
 Depression-related PROMs coding was consistently higher than anxiety disorder-related coding.
@@ -889,50 +867,42 @@ Over the study period, recording shifted from broader procedure codes towards na
 
 ### Comparison with existing literature
 
-Consistent with previous research [@Kendrick2009], most activity of assessing symptom severity in primary care was captured by a small number of PROMs.
-Although the NICE-recommended PHQ-9 and GAD-2 appeared among the most frequently used codes [@NationalInstituteForHealthAndCareExcellence2022; @NationalInstituteForHealthAndCareExcellence2020], the codes with the highest overall usage were the GAD-7 for anxiety disorders and "Depression screening using questions" for depression, in line with reported variation in PROMs use across general practice [@Turner2020].
-Of the three depression measures recommended for general practice use [@BritishMedicalAssociation2006], the PHQ-9 and HADS-D appeared among the most frequently recorded codes.
-This is consistent with assessment patterns observed under QOF, where the PHQ-9 accounted for most assessments [@Kendrick2009].
-The high use of PHQ-9 and GAD-7 may also reflect their role as standard outcome measures in NHS TT [@NationalCollaboratingCentreForMentalHealth2024].
-Although disorder-specific measures are recommended for conditions such as posttraumatic stress disorder [@NationalCollaboratingCentreForMentalHealth2024], these instruments were rarely recorded in general practice.
+Consistent with previous research on depression severity assessments [@Kendrick2009], most recording was captured by a small number of PROMs.
+PHQ-9 and GAD-7 were the most recorded named measures in recent years, consistent with NICE recommendations [@NationalInstituteForHealthAndCareExcellence2020; @NationalInstituteForHealthAndCareExcellence2022].
+Their frequent recording may also reflect their role as standard outcome measures in NHS TT [@NationalCollaboratingCentreForMentalHealth2024].
+The high usage of generic depression screening codes is also consistent with reported variation in PROMs recording across general practice [@Turner2020].
+Although anxiety disorder-specific measures are recommended for conditions such as posttraumatic stress disorder [@NationalCollaboratingCentreForMentalHealth2024], and social anxiety disorder [@NationalInstituteForHealthAndCareExcellence2013] these instruments were rarely recorded in general practice.
+Recording of the brief measures PHQ-2 and GAD-2 also increased alongside their longer versions.
+However, these are primarily used for screening [@NationalInstituteForHealthAndCareExcellence2020; @Kroenke2003], so their increase may not reflect more frequent outcome monitoring.
 
-Depression PROMs coding was consistently highest across the study period, potentially reflecting the earlier financial incentives [@Kendrick2009; @Kendrick2020].
-The early decline in depression coding we observed coincided with the removal of the incentive in 2013 [@Kendrick2009; @Kendrick2020].
-NICE guidance continued to recommend the use of routine outcome monitoring [@NationalInstituteForHealthAndCareExcellence2022], which may partly explain the persistence of PHQ-9 recording.
-PHQ-9 score recording recovered to levels above those observed under QOF incentivisation.
+Depression PROMs coding was consistently higher than anxiety disorder PROMs coding across the study period, despite anxiety disorders being at least as common in the community [@Morris2025].
+This potentially reflects the earlier financial incentives to use depression PROMs under QOF [@Kendrick2020; @Kendrick2009].
+The early decline of depression coding coincided with the removal of these incentives in 2013 [@Kendrick2020; @Kendrick2009].
+The frequent recording of PHQ-9 is consistent with patterns observed under QOF, where it accounted for most recorded depression severity assessments [@Kendrick2009].
+NICE guidance continued to recommend routine outcome monitoring [@NationalInstituteForHealthAndCareExcellence2022], which may partly explain why PHQ-9 continued to be recorded.
+By `r year(END_DATE)`, PHQ-9 score recording had recovered to levels above those observed under QOF incentivisation.
 Possible explanations include psychological services placing greater value on symptom scores for referred patients, or changes in how symptom questionnaires are used in primary care.
 For example, recorded remote consultations in English general practice more than tripled during the COVID-19 pandemic [@Aminu2025].
 Patient communication platforms enable patients to complete PROMs remotely, with scores written into the patient's EHR, including PHQ-9 and GAD-7 scores [@Davies2026].
+For anxiety disorders, GAD-7 coding increased over the study period, while GAD-2 score recording increased from 2019.
+This parallels broader increases in recorded anxiety diagnoses and symptoms in UK primary care from around 2011 [@Archer2022; @Slee2021].
 
-The increased coding of PROMs for anxiety disorders from 2011, particularly GAD-2 and GAD-7, is consistent with NICE recommendations to consider the GAD-2 and to monitor outcomes with short questionnaires [@NationalInstituteForHealthAndCareExcellence2020].
-The increase in anxiety disorder PROMs coding parallels broader increases in recorded anxiety diagnoses and symptoms in UK primary care from around 2011 [@Archer2022; @Slee2021].
-In addition, the estimated prevalence in England was higher for generalised anxiety disorder compared to depressive episodes in 2023/24 [@Morris2025].
-Nevertheless, anxiety disorder PROMs coding remained lower than depression PROMs coding.
-The discrepancy may reflect differences in the clinical pathways and incentives surrounding the assessment and monitoring of anxiety disorders and depression in primary care.
-
-A further pattern was a shift away from broader procedure codes towards named PROMs score codes, which better indicate what was assessed and may improve interpretability.
-NICE recommends the Whooley screening in yes/no form, but PHQ-2 scores were recorded about `r txt_dep_phq2_whooley_ratio_last_rounded` times as often as Whooley codes in `r format(END_DATE, "%B %Y")`.
-<!-- TODO Milan: decide how to word this. Whooley screening may have been done and recorded under a generic code such as "Depression screening using questions", so we do not know how often it was used. That code cannot record a yes/no answer. -->
-Short measures are designed as a first step and not to monitor severity [@Kroenke2003], so their increase may not reflect better outcome monitoring.
 In 2016, a Cochrane review found insufficient evidence that routine PROMs monitoring improves outcomes in common mental health disorders, with only two of 17 studies conducted in primary care [@Kendrick2016].
-Since then, a cluster randomised trial in English and Welsh general practices found no significant effect of PHQ-9 monitoring on depression symptom outcomes, although patients' quality of life improved and in a post-hoc per-protocol analysis, recording of follow-up PHQ-9 scores led to more changes of treatment and referrals [@Kendrick2024a].
-Given the substantial growth in PROMs recording in general practice since 2016, national studies using patient-level data could re-evaluate the impact of PROMs on patient outcomes in routine care.
+Since then, a cluster randomised trial in English and Welsh general practices found no significant effect of PHQ-9 monitoring on depression symptom outcomes, although patients' quality of life improved [@Kendrick2024a].
+Given the substantial growth in PROMs recording in general practice since 2016, national studies using patient-level data could first establish how PROMs are used for repeated monitoring and then examine their relationship with patient outcomes.
 
 ### Strengths and limitations
 
-The main strength of this study is its national scale.
-The codelists developed for this study are openly available on OpenCodelists and can be reused in future patient-level work using EHRs.
-This study also demonstrates how the *opencodecounts* R package [@Tamborska2025] can be used to study PROMs recording activity in general practice using only publicly available aggregate data, without applying for patient-level data extracts from NHS England.
+Strengths of this study include its national scale and the effective use of publicly available aggregate data without requiring patient level access.
+It demonstrates the combined use of OpenCodelists and OpenCodeCounts [@Tamborska2025], which may support future studies.
 
 The main limitation is that this study used aggregate counts of recorded code usage, rather than patient-level data.
-This means we cannot distinguish how often PROMs are used per patient and how this may change over time. However, it is likely that individual PROMs codes on the whole are representative of unique PROMs completion events, for example the same patient completing the PHQ-9 at different appointments.
-It is also difficult to disentangle broader changes in clinical coding trends from clinical practice trends in recording, especially when there are no financial incentives to record activities.
-Some PROMs-related information may be recorded in free text clinical notes rather than structured codes, so the analysis may undercapture the number of PROMs used.
-Before 2019, data was submitted in Read v2 or CTV3 format and was mapped to SNOMED CT, which may affect the comparability of counts across the full study period.
-We also cannot determine how PROMs codes were added to primary care records.
-For example, whether the codes were imported from patient applications that were completed online, external services such as NHS TT, or recorded during primary care consultations.
-We also cannot tell whether short measures were used alone or recorded alongside a full measure.
-The use of generic codes, such as "*Depression screening using questions*", creates uncertainty about which specific PROM was administered.
+This means we cannot determine how often PROMs were recorded for individual patients.
+It is also difficult to disentangle changes in clinical coding from changes in practice, especially when recording is not financially incentivised.
+Some PROMs-related information may be recorded in free text clinical notes rather than structured codes, so the analysis may underestimate PROMs use.
+Before 2019, data was submitted in Read v2 or CTV3 format and mapped to SNOMED CT, which may affect comparability over time.
+We also cannot tell whether brief screening questionnaires were used alone or recorded alongside a full measure.
+Generic codes, such as "*Depression screening using questions*", do not identify which specific PROM was administered.
 
 ### Implications for research and practice
 
@@ -948,10 +918,8 @@ The *nhstt* R package [@Wiedemann2026] provides access to this data in an analys
 
 ### Conclusion
 
-Recording of anxiety disorders and depression severity in English general practice is captured by a small number of PROMs and has shifted towards named score codes.
-Recording declined after depression incentives were withdrawn in 2013, then increased again for both conditions in recent years.
-PHQ-9 and GAD-7 scores are now the most used measures, matching the outcome measures used in NHS TT.
-Publicly available aggregate data can be used to describe this activity and inform future patient-level research on PROMs in routine care.
+Recording of PROMs in English general practice has shifted towards named score codes, particularly PHQ-9 and GAD-7.
+Publicly available aggregate data can be used to describe these trends and inform future patient-level research.
 
 ### CRediT authorship contribution statement
 
