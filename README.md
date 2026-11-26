@@ -17,10 +17,10 @@ pak::pak("bennettoxford/opencodecounts")
 
 We developed the following four codelists:
 
-- [PROMs for anxiety disorders](https://www.opencodelists.org/codelist/user/Lola_O/patient-reported-outcome-measures-for-anxiety-disorders/)
-- [Declined PROMs for anxiety disorders](https://www.opencodelists.org/codelist/user/Lola_O/declined-proms-for-anxiety-disorders/)
-- [PROMs for depression](https://www.opencodelists.org/codelist/user/Lola_O/patient-reported-outcome-measures-for-depression/)
-- [Declined PROMs for depression](https://www.opencodelists.org/codelist/user/Lola_O/declined-proms-for-depression/)
+- [PROMs for anxiety disorders](https://www.opencodelists.org/codelist/user/Lola_O/proms-anx/)
+- [Declined PROMs for anxiety disorders](https://www.opencodelists.org/codelist/user/Lola_O/proms-anx-declined/)
+- [PROMs for depression](https://www.opencodelists.org/codelist/user/Lola_O/proms-dep/)
+- [Declined PROMs for depression](https://www.opencodelists.org/codelist/user/Lola_O/proms-dep-declined/)
 
 The codelist versions are listed in `codelists/codelists.txt`.
 Rendering the manuscript downloads them to `codelists/` as CSV files.
