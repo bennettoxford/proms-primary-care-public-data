@@ -11,3 +11,4 @@ output/manuscript/proms.docx
 manuscript/elsevier-vancouver.csl
 manuscript/*_files/*
 manuscript/*.md
+manuscript/_publish.yml
