@@ -100,6 +100,7 @@ crossref:
     - kind: float
       key: tbls
       latex-env: tbls
+      caption-location: top
       reference-prefix: "Table S"
       space-before-numbering: false
 format:
@@ -108,7 +109,11 @@ format:
     format-links: false
   docx:
     fig-dpi: 300
-  pdf: default
+  pdf:
+    template-partials:
+      - partials/title.tex
+    filters:
+      - partials/corresponding.lua
 execute:
   echo: false
   warning: false
@@ -455,7 +460,9 @@ gtsave(
   here("output", "tables", "tab-anx-dep-top.png")
 )
 
-if (knitr::is_html_output() | knitr::is_latex_output()) {
+if (knitr::is_latex_output()) {
+  tab_options(tab_anx_dep_top, table.font.size = "9pt")
+} else if (knitr::is_html_output()) {
   tab_anx_dep_top
 } else {
   knitr::include_graphics(here(
@@ -872,7 +879,7 @@ PHQ-9 and GAD-7 were the most recorded named measures in recent years, consisten
 Their frequent recording may also reflect their role as standard outcome measures in NHS TT [@NationalCollaboratingCentreForMentalHealth2024].
 The high usage of generic depression screening codes is also consistent with reported variation in PROMs recording across general practice [@Turner2020].
 Although NICE recommends anxiety disorder-specific measures for conditions such as social anxiety disorder [@NationalInstituteForHealthAndCareExcellence2013], these instruments were rarely recorded in general practice.
-NICE also recommends the 3-item mini-SPIN [@Connor2001] to identify possible cases [@NationalInstituteForHealthAndCareExcellence2013].
+NICE also recommends the 3-item mini-SPIN [@Connor2001] to identify possible cases of social anxiety [@NationalInstituteForHealthAndCareExcellence2013].
 We could not identify a SNOMED CT code for the mini-SPIN, so its use cannot be recorded in a structured form.
 In contrast, the brief PHQ-2 and GAD-2 have their own codes, and their recording increased alongside their longer versions.
 However, these are primarily used for screening [@NationalInstituteForHealthAndCareExcellence2020; @Kroenke2003; @Kroenke2007], so their increase may not reflect more frequent outcome monitoring.
@@ -997,8 +1004,10 @@ gtsave(
   here("output", "tables", "tab-anx-dep-nhs-refsets.png")
 )
 
-# gt's LaTeX table cannot sit inside the custom tbls float, so PDF uses the PNG
-if (knitr::is_html_output()) {
+# A longtable is not a float, so it can sit inside the custom tbls float
+if (knitr::is_latex_output()) {
+  tab_options(tab_anx_dep_nhs_refsets, table.font.size = "9pt", latex.use_longtable = TRUE)
+} else if (knitr::is_html_output()) {
   tab_anx_dep_nhs_refsets
 } else {
   knitr::include_graphics(here(
@@ -1059,8 +1068,10 @@ gtsave(
   here("output", "tables", "tab-anx-dep-study-codelists.png")
 )
 
-# gt's LaTeX table cannot sit inside the custom tbls float, so PDF uses the PNG
-if (knitr::is_html_output()) {
+# A longtable is not a float, so it can sit inside the custom tbls float
+if (knitr::is_latex_output()) {
+  tab_options(tab_anx_dep_study_codelists, table.font.size = "9pt", latex.use_longtable = TRUE)
+} else if (knitr::is_html_output()) {
   tab_anx_dep_study_codelists
 } else {
   knitr::include_graphics(here(
