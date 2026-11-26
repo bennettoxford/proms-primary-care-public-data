@@ -294,7 +294,7 @@ The National Institute for Health and Care Excellence (NICE) and the British Med
 For depression, the Patient Health Questionnaire-9 [PHQ-9, @Kroenke2001], the Beck Depression Inventory [BDI-II, @Beck1996], and the depression subscale of the Hospital Anxiety and Depression Scale [HADS-D, @Zigmond1983] are recommended for symptom severity assessment.
 Brief screening questionnaires for depression include the Whooley screening [@Whooley1997] and the 2-item version of the PHQ [PHQ-2, @Kroenke2003].
 Both these measures ask the same questions, but differ on response options (yes/no vs Likert scale).
-For anxiety disorders, the Generalised Anxiety Disorder 7-item scale [GAD-7, @Spitzer2006] is widely used for symptom severity, with the 2-item version (GAD-2) used for screening [@NationalInstituteForHealthAndCareExcellence2020].
+For anxiety disorders, the Generalised Anxiety Disorder 7-item scale [GAD-7, @Spitzer2006] is widely used for symptom severity, with the 2-item version [GAD-2, @Kroenke2007] used for screening [@NationalInstituteForHealthAndCareExcellence2020].
 How these recommendations translate into routine practice is less clear.
 
 Systematic use of PROMs at initial assessment and follow-up can improve patient outcomes, particularly in psychological therapy settings [@Clark2018a; @Kendrick2016; @Kendrick2020; @Kendrick2024a; @Gelkopf2022].
